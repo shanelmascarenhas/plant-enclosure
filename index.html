@@ -3,19 +3,39 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Plant Enclosure Control</title>
+    <title>Smart Enclosure</title>
     <style>
-        body { background: #0b0f0c; color: white; font-family: sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
-        .menu { display: flex; flex-direction: column; gap: 20px; width: 300px; }
-        .btn { padding: 20px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: white; border-radius: 12px; text-align: center; text-decoration: none; font-size: 18px; transition: 0.2s; }
-        .btn:hover { background: rgba(44, 255, 138, 0.2); border-color: #2cff8a; }
+        body { margin: 0; background: #0b0f0c; color: white; font-family: system-ui, sans-serif; height: 100vh; display: flex; align-items: center; justify-content: center; }
+        .menu-container { display: flex; flex-direction: column; gap: 20px; width: 90%; max-width: 400px; text-align: center; }
+        h1 { margin-bottom: 10px; font-weight: 300; letter-spacing: 1px; }
+        
+        .big-btn {
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            padding: 30px; border-radius: 20px;
+            background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);
+            color: white; text-decoration: none; transition: 0.2s;
+        }
+        .big-btn:hover { background: rgba(255,255,255,0.1); transform: translateY(-2px); border-color: rgba(255,255,255,0.3); }
+        .icon { font-size: 40px; margin-bottom: 10px; }
+        .label { font-size: 20px; font-weight: bold; }
+        .sub { font-size: 14px; color: rgba(255,255,255,0.6); margin-top: 5px; }
     </style>
 </head>
 <body>
-    <div class="menu">
-        <h1>🌿 Main Menu</h1>
-        <a href="plant.html?plant=pothos" class="btn">Control / Plant Info</a>
-        <a href="#" class="btn">Third Option (Coming Soon)</a>
+    <div class="menu-container">
+        <h1>GARDEN OS</h1>
+        
+        <a href="list.html" class="big-btn">
+            <span class="icon">🌿</span>
+            <span class="label">Plant Database</span>
+            <span class="sub">Browse presets for common plants</span>
+        </a>
+
+        <a href="#" class="big-btn" onclick="alert('Manual Control Page coming soon!')">
+            <span class="icon">🎛️</span>
+            <span class="label">Manual Control</span>
+            <span class="sub">Adjust specific sensor values</span>
+        </a>
     </div>
 </body>
 </html>

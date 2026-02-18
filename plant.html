@@ -5,133 +5,242 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Plant Info</title>
     <style>
-      :root{ --bg: #0b0f0c; --card: rgba(255,255,255,0.06); --text: rgba(255,255,255,0.92); --muted: rgba(255,255,255,0.72); --stroke: rgba(255,255,255,0.12); --radius: 18px; }
+      :root{ --bg: #0b0f0c; --card: rgba(255,255,255,0.06); --card2: rgba(255,255,255,0.10); --text: rgba(255,255,255,0.92); --muted: rgba(255,255,255,0.72); --stroke: rgba(255,255,255,0.12); --shadow: 0 18px 60px rgba(0,0,0,0.45); --radius: 18px; }
       * { box-sizing: border-box; }
-      body{ margin:0; font-family: system-ui, sans-serif; color: var(--text); background: #0b0f0c; min-height: 100vh; display:flex; align-items:center; justify-content:center; padding: 22px; }
-      .wrap{ width: min(500px, 100%); display:flex; flex-direction: column; gap: 18px; }
-      .card{ background: var(--card); border: 1px solid var(--stroke); border-radius: var(--radius); padding: 20px; backdrop-filter: blur(10px); }
-      .hero img{ width: 100%; height: 200px; object-fit: cover; border-radius: 12px; margin-bottom: 15px; }
-      h1 { margin: 0 0 5px 0; }
-      .grid{ display:grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin: 15px 0; }
-      .mini{ background: rgba(255,255,255,0.05); padding: 10px; border-radius: 8px; text-align: center; }
-      .k{ font-size: 12px; color: var(--muted); margin-bottom: 4px; }
-      .v{ font-weight: bold; }
-      .btn{ width: 100%; padding: 15px; border-radius: 12px; border: none; font-weight: bold; cursor: pointer; margin-top: 10px; font-size: 16px; }
-      .btnPrimary{ background: #2cff8a; color: #000; }
-      .btnPrimary:disabled { background: #555; cursor: not-allowed; }
-      #statusMsg { margin-top: 10px; text-align: center; font-size: 13px; color: var(--muted); }
+      body{ margin:0; font-family: system-ui, sans-serif; color: var(--text); background: radial-gradient(1200px 800px at 20% 10%, rgba(44, 255, 138, 0.15), transparent 55%), #0b0f0c; min-height: 100vh; display:flex; align-items:center; justify-content:center; padding: 22px; }
+      .wrap{ width: min(980px, 100%); display:grid; grid-template-columns: 1.15fr 0.85fr; gap: 18px; }
+      @media (max-width: 820px){ .wrap{ grid-template-columns: 1fr; } }
+      .card{ background: var(--card); border: 1px solid var(--stroke); border-radius: var(--radius); box-shadow: var(--shadow); overflow:hidden; backdrop-filter: blur(10px); }
+      .hero{ position: relative; height: 300px; background: #111; }
+      .hero img{ width: 100%; height: 100%; object-fit: cover; display:block; filter: saturate(1.1); }
+      .hero::after{ content:""; position:absolute; inset:0; background: linear-gradient(180deg, rgba(0,0,0,0.1), rgba(0,0,0,0.8)); pointer-events:none; }
+      .topline{ position:absolute; left: 16px; right: 16px; bottom: 14px; display:flex; justify-content:space-between; align-items:flex-end; z-index: 2; }
+      .titleblock h1{ margin:0; font-size: 28px; line-height: 1.15; }
+      .titleblock p{ margin: 6px 0 0; color: var(--muted); font-size: 14px; }
+      .content{ padding: 16px; }
+      .grid{ display:grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: 12px; } /* Changed to 4 columns for Humidity */
+      @media (max-width: 520px){ .grid{ grid-template-columns: 1fr 1fr; } }
+      .mini{ background: var(--card2); border: 1px solid var(--stroke); border-radius: 14px; padding: 12px; text-align: center; }
+      .mini .k{ color: var(--muted); font-size: 11px; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px; }
+      .mini .v{ font-size: 14px; font-weight: bold; }
+      .sectionTitle{ margin: 18px 0 8px; font-weight: 700; }
+      .chips{ display:flex; flex-wrap:wrap; gap: 8px; }
+      .chip{ padding: 6px 12px; border-radius: 99px; border: 1px solid rgba(255,255,255,0.14); background: rgba(255,255,255,0.08); font-size: 13px; }
+      
+      /* ACTION BUTTONS */
+      .actions{ display:grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 20px; }
+      .btn{ appearance: none; border: 1px solid rgba(255,255,255,0.16); background: rgba(255,255,255,0.08); color: var(--text); padding: 14px; border-radius: 12px; font-weight: 650; font-size: 14px; cursor: pointer; display:inline-flex; align-items:center; justify-content: center; gap: 8px; text-decoration: none; text-align: center; }
+      .btn:hover{ background: rgba(255,255,255,0.15); }
+      
+      /* Primary is Blue for Enclosure, Green for Buy */
+      .btnSend { background: rgba(79, 153, 255, 0.2); border-color: rgba(79, 153, 255, 0.4); grid-column: span 2; }
+      .btnSend:hover { background: rgba(79, 153, 255, 0.3); }
+      .btnBuy { background: rgba(44, 255, 138, 0.16); border-color: rgba(44, 255, 138, 0.28); }
+      .btnBuy:hover { background: rgba(44, 255, 138, 0.22); }
+      
+      .side{ padding: 20px; }
+      .side h2{ margin: 0 0 10px; font-size: 18px; }
+      .list{ padding-left: 20px; color: rgba(255,255,255,0.85); line-height: 1.6; font-size: 14px; }
+      .back-link { position: absolute; top: 20px; left: 20px; z-index: 10; background: rgba(0,0,0,0.5); padding: 8px 12px; border-radius: 8px; color: white; text-decoration: none; font-size: 12px; backdrop-filter: blur(4px); }
+      #statusMsg { grid-column: span 2; text-align: center; font-size: 12px; margin-top: 5px; color: var(--muted); height: 16px; }
     </style>
   </head>
+
   <body>
     <div class="wrap">
       <div class="card">
         <div class="hero">
-          <img id="plantImg" alt="Plant" src="" />
-          <h1 id="plantName">Plant Name</h1>
-          <p id="plantSubtitle" style="color:var(--muted)">Plant Subtitle</p>
+          <a href="list.html" class="back-link">← Back to List</a>
+          <img id="plantImg" alt="Plant photo" src="" />
+          <div class="topline">
+            <div class="titleblock">
+              <h1 id="plantName">Plant Name</h1>
+              <p id="plantSubtitle">Scientific Name</p>
+            </div>
+          </div>
         </div>
 
-        <div class="grid">
-          <div class="mini"><div class="k">TEMP</div><div class="v" id="tempDisp">--</div></div>
-          <div class="mini"><div class="k">HUMIDITY</div><div class="v" id="humDisp">--</div></div>
-          <div class="mini"><div class="k">LIGHT</div><div class="v" id="lightDisp">--</div></div>
-        </div>
+        <div class="content">
+          <div class="grid">
+            <div class="mini">
+              <div class="k">🌞 Light</div>
+              <div class="v" id="light">—</div>
+            </div>
+            <div class="mini">
+              <div class="k">💧 Water</div>
+              <div class="v" id="water">—</div>
+            </div>
+            <div class="mini">
+              <div class="k">🌡️ Temp</div>
+              <div class="v" id="temp">—</div>
+            </div>
+            <div class="mini">
+              <div class="k">☁️ Humidity</div>
+              <div class="v" id="humidity">—</div>
+            </div>
+          </div>
 
-        <button class="btn btnPrimary" id="uploadBtn">📡 Send Settings to Enclosure</button>
-        <div id="statusMsg"></div>
-        
-        <br>
-        <button class="btn" style="background:rgba(255,255,255,0.1); color:white;" onclick="window.history.back()">Back to Menu</button>
+          <div class="sectionTitle">Care tips</div>
+          <div class="chips" id="tipsChips"></div>
+
+          <div class="actions">
+            <button class="btn btnSend" id="sendBtn">📡 Send to Enclosure</button>
+            <div id="statusMsg"></div>
+
+            <a href="#" class="btn btnBuy" id="buyBtn" target="_blank">🛒 Buy Plant</a>
+            <button class="btn" id="saveBtn">💚 Save</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="side">
+          <h2>Quick guide</h2>
+          <ul class="list" id="quickGuide"></ul>
+          <div style="margin-top:20px; font-size:12px; color:var(--muted); border-top:1px solid var(--stroke); padding-top:10px;">
+            Enclosure Settings Preview:<br>
+            <span id="debugSettings" style="font-family:monospace; color:#4f99ff;"></span>
+          </div>
+        </div>
       </div>
     </div>
 
     <script>
-      // --- CONFIGURATION ---
-      const GITHUB_USER = "shanelmascarenhas"; 
-      const GITHUB_REPO = "plant-enclosure"; 
-      const GITHUB_TOKEN = "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"; // Keep private!
+      // --- 1. GITHUB CONFIGURATION ---
+      const GITHUB_USER = "shanelmascarenhas";
+      const GITHUB_REPO = "plant-enclosure";
+      const GITHUB_TOKEN = "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"; 
       const FILE_PATH = "settings.json";
 
-      // --- PLANT DATA (Enhanced with raw values for the ESP32) ---
+      // --- 2. PLANT DATA ---
+      // Note: "settings" object matches the variables in your ESP32 Menu.ino
       const plants = {
         pothos: {
           name: "Pothos", subtitle: "Epipremnum aureum",
-          img: "https://images.unsplash.com/photo-1614594975525-e45190c55d0b?auto=format&fit=crop&w=800&q=80",
-          display: { temp: "65-85°F", hum: "40-60%", light: "Low-Med" },
-          // These values get sent to ESP32
+          img: "https://images.unsplash.com/photo-1614594975525-e45190c55d0b?w=1000&q=80",
+          display: { temp: "65-85°F", hum: "40-60%", light: "Low/Med", water: "Weekly" },
           settings: {
             tempLow: 65.0, tempHigh: 85.0,
             humLow: 40.0, humHigh: 60.0,
             soilLow: 20, soilHigh: 50,
-            timeOnHour: 9, timeOffHour: 19, // 10 hours light
-            luxThreshold: 5000 // Low light
-          }
+            timeOnHour: 9, timeOffHour: 19,
+            luxThreshold: 5000
+          },
+          tips: ["Rotate weekly", "Wipe leaves", "Avoid harsh sun"],
+          guide: ["Water when top 2cm is dry.", "Thrives in indirect light.", "Fertilize in Spring."],
+          buyUrl: "https://www.amazon.com/s?k=pothos+plant"
         },
         snake: {
           name: "Snake Plant", subtitle: "Sansevieria",
-          img: "https://images.unsplash.com/photo-1598880940080-ff9a29891b85?auto=format&fit=crop&w=800&q=80",
-          display: { temp: "60-90°F", hum: "30-50%", light: "Low" },
+          img: "https://images.unsplash.com/photo-1598880940080-ff9a29891b85?w=1000&q=80",
+          display: { temp: "60-90°F", hum: "30-50%", light: "Any", water: "2-3 Wks" },
           settings: {
             tempLow: 60.0, tempHigh: 90.0,
             humLow: 30.0, humHigh: 50.0,
             soilLow: 10, soilHigh: 40,
             timeOnHour: 8, timeOffHour: 20,
             luxThreshold: 3000
-          }
+          },
+          tips: ["Don't overwater", "Wipe dust", "Hardy"],
+          guide: ["Let soil dry completely.", "Tolerates low light.", "Use cactus soil."],
+          buyUrl: "https://www.amazon.com/s?k=snake+plant"
         },
         monstera: {
-            name: "Monstera", subtitle: "Deliciosa",
-            img: "https://images.unsplash.com/photo-1614594975525-e45190c55d0b?auto=format&fit=crop&w=800&q=80", // Placeholder
-            display: { temp: "68-86°F", hum: "60-80%", light: "Bright" },
-            settings: {
-                tempLow: 68.0, tempHigh: 86.0,
-                humLow: 60.0, humHigh: 80.0,
-                soilLow: 40, soilHigh: 70,
-                timeOnHour: 7, timeOffHour: 21,
-                luxThreshold: 20000 
-            }
+          name: "Monstera", subtitle: "Monstera deliciosa",
+          img: "https://images.unsplash.com/photo-1614594975525-e45190c55d0b?w=1000&q=80", 
+          display: { temp: "68-86°F", hum: "60-80%", light: "Bright", water: "1-2 Wks" },
+          settings: {
+            tempLow: 68.0, tempHigh: 86.0,
+            humLow: 60.0, humHigh: 80.0,
+            soilLow: 40, soilHigh: 70,
+            timeOnHour: 7, timeOffHour: 21,
+            luxThreshold: 20000 
+          },
+          tips: ["Needs support", "Mist leaves", "Filter sun"],
+          guide: ["Keep soil moist but not wet.", "Likes humidity.", "Provide a moss pole."],
+          buyUrl: "https://www.amazon.com/s?k=monstera+plant"
+        },
+        spider: {
+          name: "Spider Plant", subtitle: "Chlorophytum",
+          img: "https://images.unsplash.com/photo-1572252821143-096f94796c88?w=1000&q=80",
+          display: { temp: "60-75°F", hum: "40-60%", light: "Indirect", water: "Weekly" },
+          settings: {
+             tempLow: 60.0, tempHigh: 75.0,
+             humLow: 40.0, humHigh: 60.0,
+             soilLow: 30, soilHigh: 60,
+             timeOnHour: 8, timeOffHour: 20,
+             luxThreshold: 10000
+          },
+          tips: ["Easy to propagate", "Brown tips = dry"],
+          guide: ["Water well, let drain.", "Avoid direct sun.", "Cut babies to grow new plants."],
+          buyUrl: "https://www.amazon.com/s?k=spider+plant"
+        },
+        aloe: {
+          name: "Aloe Vera", subtitle: "Aloe barbadensis",
+          img: "https://images.unsplash.com/photo-1596547610057-0b1e4c76747b?w=1000&q=80",
+          display: { temp: "55-80°F", hum: "Dry", light: "Direct", water: "3 Wks" },
+          settings: {
+             tempLow: 55.0, tempHigh: 80.0,
+             humLow: 10.0, humHigh: 40.0,
+             soilLow: 5, soilHigh: 30,
+             timeOnHour: 7, timeOffHour: 19,
+             luxThreshold: 40000
+          },
+          tips: ["Harvest gel", "Sun lover", "Sandy soil"],
+          guide: ["Deep water, then dry out.", "Sunny windowsill.", "Medicinal gel inside leaves."],
+          buyUrl: "https://www.amazon.com/s?k=aloe+vera+plant"
         }
       };
 
-      // Load Plant Info
+      // --- 3. PAGE LOGIC ---
       const params = new URLSearchParams(window.location.search);
       const plantId = (params.get("plant") || "pothos").toLowerCase();
       const p = plants[plantId] || plants["pothos"];
 
+      // Fill Data
       document.getElementById("plantName").textContent = p.name;
       document.getElementById("plantSubtitle").textContent = p.subtitle;
       document.getElementById("plantImg").src = p.img;
-      document.getElementById("tempDisp").textContent = p.display.temp;
-      document.getElementById("humDisp").textContent = p.display.hum;
-      document.getElementById("lightDisp").textContent = p.display.light;
+      
+      document.getElementById("light").textContent = p.display.light;
+      document.getElementById("water").textContent = p.display.water;
+      document.getElementById("temp").textContent = p.display.temp;
+      document.getElementById("humidity").textContent = p.display.hum; // New metric
+      document.getElementById("buyBtn").href = p.buyUrl;
 
-      // --- UPLOAD LOGIC ---
-      const btn = document.getElementById("uploadBtn");
+      // Debug Preview
+      document.getElementById("debugSettings").textContent = `T:${p.settings.tempLow}-${p.settings.tempHigh} H:${p.settings.humLow}-${p.settings.humHigh}`;
+
+      const tipsContainer = document.getElementById("tipsChips");
+      p.tips.forEach(t => {
+        const d = document.createElement("div"); d.className="chip"; d.textContent="✨ "+t; tipsContainer.appendChild(d);
+      });
+      const guideContainer = document.getElementById("quickGuide");
+      p.guide.forEach(g => {
+        const l = document.createElement("li"); l.textContent=g; guideContainer.appendChild(l);
+      });
+
+      // --- 4. SEND TO GITHUB LOGIC ---
+      const sendBtn = document.getElementById("sendBtn");
       const status = document.getElementById("statusMsg");
 
-      btn.addEventListener("click", async () => {
-        btn.disabled = true;
-        btn.textContent = "Connecting to Enclosure...";
-        status.textContent = "Fetching current config...";
+      sendBtn.addEventListener("click", async () => {
+        sendBtn.disabled = true;
+        sendBtn.textContent = "Connecting...";
+        status.textContent = "Fetching current SHA...";
 
         try {
-            // 1. Get the current file SHA (required by GitHub API to update)
+            // A. Get current file SHA
             const getUrl = `https://api.github.com/repos/${GITHUB_USER}/${GITHUB_REPO}/contents/${FILE_PATH}`;
-            const getResp = await fetch(getUrl, {
-                headers: { "Authorization": `token ${GITHUB_TOKEN}` }
-            });
+            const getResp = await fetch(getUrl, { headers: { "Authorization": `token ${GITHUB_TOKEN}` } });
             
-            if (!getResp.ok) throw new Error("Could not connect to GitHub");
+            if (!getResp.ok) throw new Error("GitHub Connection Failed");
             const getData = await getResp.json();
-            const sha = getData.sha;
-
-            // 2. Prepare the new content
-            // The content must be Base64 encoded
+            
+            // B. Upload new content
+            status.textContent = "Uploading settings...";
             const newContent = JSON.stringify(p.settings, null, 2);
-            const encodedContent = btoa(newContent);
-
-            // 3. Upload (PUT request)
-            status.textContent = "Uploading new settings...";
+            
             const putResp = await fetch(getUrl, {
                 method: "PUT",
                 headers: {
@@ -140,22 +249,23 @@
                 },
                 body: JSON.stringify({
                     message: `Update settings for ${p.name}`,
-                    content: encodedContent,
-                    sha: sha
+                    content: btoa(newContent), // Base64 Encode
+                    sha: getData.sha
                 })
             });
 
-            if (!putResp.ok) throw new Error("Upload failed");
+            if (!putResp.ok) throw new Error("Upload Failed");
 
-            status.textContent = "✅ Success! ESP32 will update shortly.";
-            btn.textContent = "Settings Uploaded";
-            btn.style.background = "#4f99ff";
+            status.textContent = "✅ Settings updated in Cloud!";
+            sendBtn.textContent = "Sent Successfully";
+            sendBtn.style.background = "#2cff8a";
+            sendBtn.style.color = "#000";
 
         } catch (err) {
             console.error(err);
-            status.textContent = "❌ Error: " + err.message;
-            btn.disabled = false;
-            btn.textContent = "Try Again";
+            status.textContent = "❌ " + err.message;
+            sendBtn.textContent = "Retry";
+            sendBtn.disabled = false;
         }
       });
     </script>

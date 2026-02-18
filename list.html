@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Select a Plant</title>
+    <style>
+        body { margin: 0; background: #0b0f0c; color: white; font-family: system-ui, sans-serif; padding: 20px; }
+        h2 { text-align: center; margin-bottom: 25px; font-weight: 400; color: rgba(255,255,255,0.9); }
+        
+        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 15px; max-width: 800px; margin: 0 auto; }
+        
+        .plant-card {
+            background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 16px; overflow: hidden; text-decoration: none; color: white;
+            transition: 0.2s; display: flex; flex-direction: column;
+        }
+        .plant-card:hover { transform: translateY(-3px); border-color: #2cff8a; }
+        
+        .thumb { height: 120px; width: 100%; object-fit: cover; background: #222; }
+        .info { padding: 12px; }
+        .name { font-weight: bold; font-size: 16px; margin-bottom: 4px; }
+        .sci { font-size: 12px; color: rgba(255,255,255,0.6); font-style: italic; }
+
+        .back-btn { display: block; width: fit-content; margin: 0 auto 20px; color: rgba(255,255,255,0.6); text-decoration: none; }
+    </style>
+</head>
+<body>
+    <a href="index.html" class="back-btn">← Back to Menu</a>
+    <h2>Select a Preset</h2>
+
+    <div class="grid">
+        <a href="plant.html?plant=pothos" class="plant-card">
+            <img src="https://images.unsplash.com/photo-1614594975525-e45190c55d0b?w=400&q=80" class="thumb">
+            <div class="info"><div class="name">Pothos</div><div class="sci">Epipremnum aureum</div></div>
+        </a>
+
+        <a href="plant.html?plant=snake" class="plant-card">
+            <img src="https://images.unsplash.com/photo-1598880940080-ff9a29891b85?w=400&q=80" class="thumb">
+            <div class="info"><div class="name">Snake Plant</div><div class="sci">Sansevieria</div></div>
+        </a>
+
+        <a href="plant.html?plant=monstera" class="plant-card">
+            <img src="https://images.unsplash.com/photo-1614594975525-e45190c55d0b?w=400&q=80" class="thumb"> <div class="info"><div class="name">Monstera</div><div class="sci">Monstera deliciosa</div></div>
+        </a>
+
+        <a href="plant.html?plant=spider" class="plant-card">
+            <img src="https://images.unsplash.com/photo-1572252821143-096f94796c88?w=400&q=80" class="thumb">
+            <div class="info"><div class="name">Spider Plant</div><div class="sci">Chlorophytum</div></div>
+        </a>
+
+        <a href="plant.html?plant=aloe" class="plant-card">
+            <img src="https://images.unsplash.com/photo-1596547610057-0b1e4c76747b?w=400&q=80" class="thumb">
+            <div class="info"><div class="name">Aloe Vera</div><div class="sci">Aloe barbadensis</div></div>
+        </a>
+    </div>
+</body>
+</html>
