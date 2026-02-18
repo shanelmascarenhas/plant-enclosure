@@ -3,25 +3,18 @@
 #include <U8g2lib.h>
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
-#include <Fonts/FreeSansBold9pt7b.h>
+#include <Fonts/FreeSansBold9pt7b.h> // Required for the font you used
 
-/* 1. TOP DISPLAY (Big Screen - SH1106 I2C)
+/* 1. TOP DISPLAY (Big Screen - SH1106 I2C) - Uses U8g2 Library
  * -------------------------------------
- * GND  -> ESP32 GND
- * VCC  -> ESP32 3.3V
- * SDA  -> GPIO 21 (Shared)
- * SCL  -> GPIO 22 (Shared)
  * ADDR -> 0x3D
  */
 
-/* 2. BOTTOM DISPLAY (Small Screen - SSD1306 I2C)
+/* 2. BOTTOM DISPLAY (Small Screen - SSD1306 I2C) - Uses Adafruit Library
  * -------------------------------------------
- * GND  -> ESP32 GND
- * VCC  -> ESP32 3.3V
- * SDA  -> GPIO 21 (Shared)
- * SCL  -> GPIO 22 (Shared)
  * ADDR -> 0x3C
  */
+
 #define I2C_SDA 21
 #define I2C_SCL 22
 
@@ -33,8 +26,6 @@
 
 /* 3. ROTARY ENCODER
  * --------------
- * GND  -> ESP32 GND
- * +    -> ESP32 3.3V
  * SW   -> GPIO 25
  * DT   -> GPIO 33
  * CLK  -> GPIO 32
@@ -45,11 +36,11 @@
 
 // --- OBJECT INITIALIZATION ---
 
-// Top Display: I2C (SH1106)
-// We use HW_I2C. The address is set in setup().
+// Top Display: I2C (SH1106) - Uses U8g2
 U8G2_SH1106_128X64_NONAME_F_HW_I2C topDisplay(U8G2_R0, /* reset=*/U8X8_PIN_NONE);
 
-// Bottom Display: I2C (SSD1306)
+// Bottom Display: I2C (SSD1306) - Uses Adafruit SSD1306
+// -1 means no reset pin is used
 Adafruit_SSD1306 bottomDisplay(BOTTOM_W, BOTTOM_H, &Wire, -1);
 
 // --- GLOBAL VARIABLES ---
@@ -176,9 +167,13 @@ MenuItem mainMenu[] = {
 // --- HELPER FUNCTIONS ---
 
 void applyBrightness(int level) {
-  // Map 1-10 to hardware contrast
   int contrast = map(level, 1, 10, 1, 255);
+  
+  // Set U8g2 Contrast
   topDisplay.setContrast(contrast);
+  
+  // Set Adafruit SSD1306 Contrast
+  // Adafruit library handles dimming differently, but we can send raw command
   bottomDisplay.ssd1306_command(SSD1306_SETCONTRAST);
   bottomDisplay.ssd1306_command(contrast);
 }
@@ -236,18 +231,18 @@ String getCountdownStr() {
 void updateBottomMenu(String line1, String line2 = "") {
   bottomDisplay.clearDisplay();
   bottomDisplay.setTextColor(SSD1306_WHITE);
-
-  // Line 1: Standard Small Font (Prevents Overflow)
-  bottomDisplay.setFont(NULL);
+  
+  // Line 1: Standard font
+  bottomDisplay.setFont(NULL); 
   bottomDisplay.setTextSize(1);
   bottomDisplay.setCursor(0, 0);
-  bottomDisplay.println(line1);
+  bottomDisplay.print(line1);
 
-  // Line 2: Custom Bold Font (Big & Readable)
+  // Line 2: Big Bold font
   if (line2 != "") {
     bottomDisplay.setFont(&FreeSansBold9pt7b);
-    bottomDisplay.setCursor(0, 29);  // Draw from baseline (Y=29)
-    bottomDisplay.println(line2);
+    bottomDisplay.setCursor(0, 28);
+    bottomDisplay.print(line2);
   }
   bottomDisplay.display();
 }
@@ -262,7 +257,7 @@ void showHoverContext(const char* itemName) {
     valLine = "L:" + String((int)humLow) + "% H:" + String((int)humHigh) + "%";
   } else if (name == "Soil Moist") {
     valLine = "L:" + String(soilLow) + "% H:" + String(soilHigh) + "%";
-  } else if (name == "Light Ctrl") {
+  } else if (name == "Light Control") { // Fixed name match
     valLine = getCountdownStr();
   } else if (name == "pH Level") {
     valLine = "Current: 7.0";
@@ -278,25 +273,24 @@ void showHoverContext(const char* itemName) {
   } else {
     valLine = "Select to Edit";
   }
-
+  
   bottomDisplay.clearDisplay();
   bottomDisplay.setTextColor(SSD1306_WHITE);
-
-  // Header: Standard Small Font
+  
   bottomDisplay.setFont(NULL);
   bottomDisplay.setTextSize(1);
   bottomDisplay.setCursor(0, 0);
-  bottomDisplay.println(name);
+  bottomDisplay.print(name);
 
-  // Value: Custom Bold Font
   bottomDisplay.setFont(&FreeSansBold9pt7b);
-  bottomDisplay.setCursor(0, 29);
-  bottomDisplay.println(valLine);
-
+  bottomDisplay.setCursor(0, 28);
+  bottomDisplay.print(valLine);
+  
   bottomDisplay.display();
 }
 
 void drawTimeEdit(int h, int m, bool editingHour, String title) {
+  // TOP DISPLAY (U8G2)
   topDisplay.firstPage();
   do {
     topDisplay.setFont(u8g2_font_ncenB10_tr);
@@ -319,6 +313,7 @@ void drawTimeEdit(int h, int m, bool editingHour, String title) {
     else topDisplay.drawStr(94, 62, "^");
   } while (topDisplay.nextPage());
 
+  // BOTTOM DISPLAY (ADAFRUIT)
   bottomDisplay.clearDisplay();
   bottomDisplay.setTextColor(SSD1306_WHITE);
 
@@ -422,6 +417,7 @@ void drawSensorTest() {
   } while (topDisplay.nextPage());
 
   bottomDisplay.clearDisplay();
+  bottomDisplay.setTextColor(SSD1306_WHITE);
   bottomDisplay.setFont(NULL);
   bottomDisplay.setTextSize(1);
   bottomDisplay.setCursor(0, 0);
@@ -433,8 +429,8 @@ void drawSensorTest() {
   bottomDisplay.display();
 }
 
-// --- SMOOTH SOLID CIRCULAR GAUGE (Brush Method) ---
-// Fixes "dots" by drawing overlapping solid circles
+//circle
+
 void drawCircularGauge(float valLower, float valUpper, float minLimit, float maxLimit, bool editingUpper) {
   int cx = 64;
   int cy = 32;
@@ -491,6 +487,8 @@ void updateBottomEdit(String label, float currentVal, String refLabel, float ref
   String refText = refLabel + String((int)refVal);
   if (editUnit == "F") refText += (char)247;
   else refText += "%";
+  
+  // Simple layout calculation for small font
   int wRef = refText.length() * 6;  // Approx width
   bottomDisplay.setCursor(128 - wRef, 0);
   bottomDisplay.print(refText);
@@ -645,24 +643,35 @@ void enterSubMenu(MenuItem* item) {
 // --- SETUP ---
 void setup() {
   Serial.begin(115200);
+  
+  // 1. Initialize Wire FIRST
+  Wire.begin(I2C_SDA, I2C_SCL);
+
+  // 2. Initialize Encoders
   pinMode(ENC_CLK, INPUT);
   pinMode(ENC_DT, INPUT);
   pinMode(ENC_SW, INPUT_PULLUP);
   attachInterrupt(digitalPinToInterrupt(ENC_CLK), readEncoder, CHANGE);
   attachInterrupt(digitalPinToInterrupt(ENC_DT), readEncoder, CHANGE);
 
-  // Initialize I2C Hardware Bus
-  Wire.begin(I2C_SDA, I2C_SCL);
+  // 3. Initialize BOTTOM Display (Adafruit - Address 0x3C)
+  // Note: Adafruit library automatically uses 0x3C if not specified, 
+  // but we pass it just in case.
+  if(!bottomDisplay.begin(SSD1306_SWITCHCAPVCC, BOTTOM_ADDR)) {
+    Serial.println(F("SSD1306 allocation failed"));
+    // Don't freeze loop, just continue, maybe top display works
+  }
+  bottomDisplay.display(); 
+  delay(100);
+  bottomDisplay.clearDisplay();
 
-  // Initialize BOTTOM Display (Address 0x3C)
-  bottomDisplay.begin(SSD1306_SWITCHCAPVCC, BOTTOM_ADDR);
-
-  // Initialize TOP Display (Address 0x3D)
-  // U8g2 expects the I2C address to be shifted left by 1 (i.e. multiplied by 2)
+  // 4. Initialize TOP Display (U8g2 - Address 0x3D)
+  // U8g2 expects address * 2
   topDisplay.setI2CAddress(TOP_ADDR * 2);
   topDisplay.begin();
   topDisplay.setFont(u8g2_font_6x10_tf);
 
+  // 5. Initial Draw
   applyBrightness(globalBrightness);
 
   currentMenu = mainMenu;
@@ -670,6 +679,7 @@ void setup() {
   topDisplay.clearBuffer();
   topDisplay.drawStr(30, 30, "READY");
   topDisplay.sendBuffer();
+  
   updateBottomMenu("Welcome");
   delay(1000);
   lastMinuteTick = millis();
@@ -798,7 +808,6 @@ void loop() {
         lastEncoderCount = (int)editCurrent;
       } else {
         *pEditVal2 = editCurrent;
-        // CHANGED: Pass "SAVED" as 2nd argument to use Big Bold Font
         updateBottomMenu("RANGE", "SAVED");
         delay(800);
         goBack();
@@ -811,11 +820,11 @@ void loop() {
       String title = (editStep < 2) ? "TURN ON TIME" : "TURN OFF TIME";
       bool isHour = (editStep == 0 || editStep == 2);
       int showH = (editStep == 0) ? (int)editCurrent : (editStep == 1) ? tempOnH
-                                                     : (editStep == 2) ? (int)editCurrent
-                                                                       : tempOffH;
+                                                                       : (editStep == 2) ? (int)editCurrent
+                                                                                         : tempOffH;
       int showM = (editStep == 0) ? tempOnM : (editStep == 1) ? (int)editCurrent
-                                            : (editStep == 2) ? tempOffM
-                                                              : (int)editCurrent;
+                                                              : (editStep == 2) ? tempOffM
+                                                                                : (int)editCurrent;
       drawTimeEdit(showH, showM, isHour, title);
 
       if (clicked) {
@@ -837,7 +846,6 @@ void loop() {
           timeOnMinute = tempOnM;
           timeOffHour = tempOffH;
           timeOffMinute = tempOffM;
-          // CHANGED: Split text for layout
           updateBottomMenu("SCHEDULE", "SAVED");
           delay(800);
           goBack();
@@ -860,7 +868,6 @@ void loop() {
           editCurrent = currentMinute;
         } else {
           currentMinute = (int)editCurrent;
-          // CHANGED: Split text for layout
           updateBottomMenu("CLOCK", "UPDATED");
           delay(800);
           goBack();
@@ -876,7 +883,6 @@ void loop() {
     drawLuxEdit((long)editCurrent);
     if (clicked) {
       luxThreshold = (long)editCurrent;
-      // CHANGED: Split text for layout
       updateBottomMenu("LUX LIMIT", "SAVED");
       delay(800);
       goBack();
@@ -884,7 +890,6 @@ void loop() {
   } else if (uiState == STATE_EDIT_BRIGHTNESS) {
     drawBrightnessEdit((int)editCurrent);
     if (clicked) {
-      // CHANGED: Split text for layout
       updateBottomMenu("BRIGHTNESS", "SAVED");
       delay(800);
       goBack();
