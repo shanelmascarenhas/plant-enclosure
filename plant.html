@@ -1,0 +1,163 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Plant Info</title>
+    <style>
+      :root{ --bg: #0b0f0c; --card: rgba(255,255,255,0.06); --text: rgba(255,255,255,0.92); --muted: rgba(255,255,255,0.72); --stroke: rgba(255,255,255,0.12); --radius: 18px; }
+      * { box-sizing: border-box; }
+      body{ margin:0; font-family: system-ui, sans-serif; color: var(--text); background: #0b0f0c; min-height: 100vh; display:flex; align-items:center; justify-content:center; padding: 22px; }
+      .wrap{ width: min(500px, 100%); display:flex; flex-direction: column; gap: 18px; }
+      .card{ background: var(--card); border: 1px solid var(--stroke); border-radius: var(--radius); padding: 20px; backdrop-filter: blur(10px); }
+      .hero img{ width: 100%; height: 200px; object-fit: cover; border-radius: 12px; margin-bottom: 15px; }
+      h1 { margin: 0 0 5px 0; }
+      .grid{ display:grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin: 15px 0; }
+      .mini{ background: rgba(255,255,255,0.05); padding: 10px; border-radius: 8px; text-align: center; }
+      .k{ font-size: 12px; color: var(--muted); margin-bottom: 4px; }
+      .v{ font-weight: bold; }
+      .btn{ width: 100%; padding: 15px; border-radius: 12px; border: none; font-weight: bold; cursor: pointer; margin-top: 10px; font-size: 16px; }
+      .btnPrimary{ background: #2cff8a; color: #000; }
+      .btnPrimary:disabled { background: #555; cursor: not-allowed; }
+      #statusMsg { margin-top: 10px; text-align: center; font-size: 13px; color: var(--muted); }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <div class="card">
+        <div class="hero">
+          <img id="plantImg" alt="Plant" src="" />
+          <h1 id="plantName">Plant Name</h1>
+          <p id="plantSubtitle" style="color:var(--muted)">Plant Subtitle</p>
+        </div>
+
+        <div class="grid">
+          <div class="mini"><div class="k">TEMP</div><div class="v" id="tempDisp">--</div></div>
+          <div class="mini"><div class="k">HUMIDITY</div><div class="v" id="humDisp">--</div></div>
+          <div class="mini"><div class="k">LIGHT</div><div class="v" id="lightDisp">--</div></div>
+        </div>
+
+        <button class="btn btnPrimary" id="uploadBtn">📡 Send Settings to Enclosure</button>
+        <div id="statusMsg"></div>
+        
+        <br>
+        <button class="btn" style="background:rgba(255,255,255,0.1); color:white;" onclick="window.history.back()">Back to Menu</button>
+      </div>
+    </div>
+
+    <script>
+      // --- CONFIGURATION ---
+      const GITHUB_USER = "shanelmascarenhas"; 
+      const GITHUB_REPO = "plant-enclosure"; 
+      const GITHUB_TOKEN = "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"; // Keep private!
+      const FILE_PATH = "settings.json";
+
+      // --- PLANT DATA (Enhanced with raw values for the ESP32) ---
+      const plants = {
+        pothos: {
+          name: "Pothos", subtitle: "Epipremnum aureum",
+          img: "https://images.unsplash.com/photo-1614594975525-e45190c55d0b?auto=format&fit=crop&w=800&q=80",
+          display: { temp: "65-85°F", hum: "40-60%", light: "Low-Med" },
+          // These values get sent to ESP32
+          settings: {
+            tempLow: 65.0, tempHigh: 85.0,
+            humLow: 40.0, humHigh: 60.0,
+            soilLow: 20, soilHigh: 50,
+            timeOnHour: 9, timeOffHour: 19, // 10 hours light
+            luxThreshold: 5000 // Low light
+          }
+        },
+        snake: {
+          name: "Snake Plant", subtitle: "Sansevieria",
+          img: "https://images.unsplash.com/photo-1598880940080-ff9a29891b85?auto=format&fit=crop&w=800&q=80",
+          display: { temp: "60-90°F", hum: "30-50%", light: "Low" },
+          settings: {
+            tempLow: 60.0, tempHigh: 90.0,
+            humLow: 30.0, humHigh: 50.0,
+            soilLow: 10, soilHigh: 40,
+            timeOnHour: 8, timeOffHour: 20,
+            luxThreshold: 3000
+          }
+        },
+        monstera: {
+            name: "Monstera", subtitle: "Deliciosa",
+            img: "https://images.unsplash.com/photo-1614594975525-e45190c55d0b?auto=format&fit=crop&w=800&q=80", // Placeholder
+            display: { temp: "68-86°F", hum: "60-80%", light: "Bright" },
+            settings: {
+                tempLow: 68.0, tempHigh: 86.0,
+                humLow: 60.0, humHigh: 80.0,
+                soilLow: 40, soilHigh: 70,
+                timeOnHour: 7, timeOffHour: 21,
+                luxThreshold: 20000 
+            }
+        }
+      };
+
+      // Load Plant Info
+      const params = new URLSearchParams(window.location.search);
+      const plantId = (params.get("plant") || "pothos").toLowerCase();
+      const p = plants[plantId] || plants["pothos"];
+
+      document.getElementById("plantName").textContent = p.name;
+      document.getElementById("plantSubtitle").textContent = p.subtitle;
+      document.getElementById("plantImg").src = p.img;
+      document.getElementById("tempDisp").textContent = p.display.temp;
+      document.getElementById("humDisp").textContent = p.display.hum;
+      document.getElementById("lightDisp").textContent = p.display.light;
+
+      // --- UPLOAD LOGIC ---
+      const btn = document.getElementById("uploadBtn");
+      const status = document.getElementById("statusMsg");
+
+      btn.addEventListener("click", async () => {
+        btn.disabled = true;
+        btn.textContent = "Connecting to Enclosure...";
+        status.textContent = "Fetching current config...";
+
+        try {
+            // 1. Get the current file SHA (required by GitHub API to update)
+            const getUrl = `https://api.github.com/repos/${GITHUB_USER}/${GITHUB_REPO}/contents/${FILE_PATH}`;
+            const getResp = await fetch(getUrl, {
+                headers: { "Authorization": `token ${GITHUB_TOKEN}` }
+            });
+            
+            if (!getResp.ok) throw new Error("Could not connect to GitHub");
+            const getData = await getResp.json();
+            const sha = getData.sha;
+
+            // 2. Prepare the new content
+            // The content must be Base64 encoded
+            const newContent = JSON.stringify(p.settings, null, 2);
+            const encodedContent = btoa(newContent);
+
+            // 3. Upload (PUT request)
+            status.textContent = "Uploading new settings...";
+            const putResp = await fetch(getUrl, {
+                method: "PUT",
+                headers: {
+                    "Authorization": `token ${GITHUB_TOKEN}`,
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    message: `Update settings for ${p.name}`,
+                    content: encodedContent,
+                    sha: sha
+                })
+            });
+
+            if (!putResp.ok) throw new Error("Upload failed");
+
+            status.textContent = "✅ Success! ESP32 will update shortly.";
+            btn.textContent = "Settings Uploaded";
+            btn.style.background = "#4f99ff";
+
+        } catch (err) {
+            console.error(err);
+            status.textContent = "❌ Error: " + err.message;
+            btn.disabled = false;
+            btn.textContent = "Try Again";
+        }
+      });
+    </script>
+  </body>
+</html>

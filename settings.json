@@ -1,0 +1,11 @@
+{
+  "tempLow": 70.0,
+  "tempHigh": 80.0,
+  "humLow": 50.0,
+  "humHigh": 70.0,
+  "soilLow": 30,
+  "soilHigh": 60,
+  "timeOnHour": 8,
+  "timeOffHour": 20,
+  "luxThreshold": 30000
+}
