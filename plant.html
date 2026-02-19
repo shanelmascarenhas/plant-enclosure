@@ -18,7 +18,7 @@
       .titleblock h1{ margin:0; font-size: 28px; line-height: 1.15; }
       .titleblock p{ margin: 6px 0 0; color: var(--muted); font-size: 14px; }
       .content{ padding: 16px; }
-      .grid{ display:grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: 12px; } /* Changed to 4 columns for Humidity */
+      .grid{ display:grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: 12px; }
       @media (max-width: 520px){ .grid{ grid-template-columns: 1fr 1fr; } }
       .mini{ background: var(--card2); border: 1px solid var(--stroke); border-radius: 14px; padding: 12px; text-align: center; }
       .mini .k{ color: var(--muted); font-size: 11px; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px; }
@@ -27,12 +27,10 @@
       .chips{ display:flex; flex-wrap:wrap; gap: 8px; }
       .chip{ padding: 6px 12px; border-radius: 99px; border: 1px solid rgba(255,255,255,0.14); background: rgba(255,255,255,0.08); font-size: 13px; }
       
-      /* ACTION BUTTONS */
       .actions{ display:grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 20px; }
       .btn{ appearance: none; border: 1px solid rgba(255,255,255,0.16); background: rgba(255,255,255,0.08); color: var(--text); padding: 14px; border-radius: 12px; font-weight: 650; font-size: 14px; cursor: pointer; display:inline-flex; align-items:center; justify-content: center; gap: 8px; text-decoration: none; text-align: center; }
       .btn:hover{ background: rgba(255,255,255,0.15); }
       
-      /* Primary is Blue for Enclosure, Green for Buy */
       .btnSend { background: rgba(79, 153, 255, 0.2); border-color: rgba(79, 153, 255, 0.4); grid-column: span 2; }
       .btnSend:hover { background: rgba(79, 153, 255, 0.3); }
       .btnBuy { background: rgba(44, 255, 138, 0.16); border-color: rgba(44, 255, 138, 0.28); }
@@ -62,22 +60,10 @@
 
         <div class="content">
           <div class="grid">
-            <div class="mini">
-              <div class="k">🌞 Light</div>
-              <div class="v" id="light">—</div>
-            </div>
-            <div class="mini">
-              <div class="k">💧 Water</div>
-              <div class="v" id="water">—</div>
-            </div>
-            <div class="mini">
-              <div class="k">🌡️ Temp</div>
-              <div class="v" id="temp">—</div>
-            </div>
-            <div class="mini">
-              <div class="k">☁️ Humidity</div>
-              <div class="v" id="humidity">—</div>
-            </div>
+            <div class="mini"><div class="k">🌞 Light</div><div class="v" id="light">—</div></div>
+            <div class="mini"><div class="k">💧 Water</div><div class="v" id="water">—</div></div>
+            <div class="mini"><div class="k">🌡️ Temp</div><div class="v" id="temp">—</div></div>
+            <div class="mini"><div class="k">☁️ Humidity</div><div class="v" id="humidity">—</div></div>
           </div>
 
           <div class="sectionTitle">Care tips</div>
@@ -113,82 +99,96 @@
       const FILE_PATH = "settings.json";
 
       // --- 2. PLANT DATA ---
-      // Note: "settings" object matches the variables in your ESP32 Menu.ino
       const plants = {
         pothos: {
           name: "Pothos", subtitle: "Epipremnum aureum",
-          img: "https://images.unsplash.com/photo-1614594975525-e45190c55d0b?w=1000&q=80",
+          img: "https://plus.unsplash.com/premium_photo-1663962975773-44cfbefe880b?auto=format&fit=crop&w=800&q=80",
           display: { temp: "65-85°F", hum: "40-60%", light: "Low/Med", water: "Weekly" },
-          settings: {
-            tempLow: 65.0, tempHigh: 85.0,
-            humLow: 40.0, humHigh: 60.0,
-            soilLow: 20, soilHigh: 50,
-            timeOnHour: 9, timeOffHour: 19,
-            luxThreshold: 5000
-          },
+          settings: { tempLow: 65.0, tempHigh: 85.0, humLow: 40.0, humHigh: 60.0, soilLow: 20, soilHigh: 50, timeOnHour: 9, timeOffHour: 19, luxThreshold: 5000 },
           tips: ["Rotate weekly", "Wipe leaves", "Avoid harsh sun"],
           guide: ["Water when top 2cm is dry.", "Thrives in indirect light.", "Fertilize in Spring."],
-          buyUrl: "https://www.amazon.com/s?k=pothos+plant"
+          buyUrl: "#"
         },
         snake: {
           name: "Snake Plant", subtitle: "Sansevieria",
-          img: "https://images.unsplash.com/photo-1598880940080-ff9a29891b85?w=1000&q=80",
+          img: "https://images.unsplash.com/photo-1588709983192-3852c7713145?auto=format&fit=crop&w=800&q=80",
           display: { temp: "60-90°F", hum: "30-50%", light: "Any", water: "2-3 Wks" },
-          settings: {
-            tempLow: 60.0, tempHigh: 90.0,
-            humLow: 30.0, humHigh: 50.0,
-            soilLow: 10, soilHigh: 40,
-            timeOnHour: 8, timeOffHour: 20,
-            luxThreshold: 3000
-          },
+          settings: { tempLow: 60.0, tempHigh: 90.0, humLow: 30.0, humHigh: 50.0, soilLow: 10, soilHigh: 40, timeOnHour: 8, timeOffHour: 20, luxThreshold: 3000 },
           tips: ["Don't overwater", "Wipe dust", "Hardy"],
           guide: ["Let soil dry completely.", "Tolerates low light.", "Use cactus soil."],
-          buyUrl: "https://www.amazon.com/s?k=snake+plant"
+          buyUrl: "#"
         },
         monstera: {
           name: "Monstera", subtitle: "Monstera deliciosa",
-          img: "https://images.unsplash.com/photo-1614594975525-e45190c55d0b?w=1000&q=80", 
+          img: "https://images.unsplash.com/photo-1585598117002-9fb152e67dbf?auto=format&fit=crop&w=800&q=80", 
           display: { temp: "68-86°F", hum: "60-80%", light: "Bright", water: "1-2 Wks" },
-          settings: {
-            tempLow: 68.0, tempHigh: 86.0,
-            humLow: 60.0, humHigh: 80.0,
-            soilLow: 40, soilHigh: 70,
-            timeOnHour: 7, timeOffHour: 21,
-            luxThreshold: 20000 
-          },
+          settings: { tempLow: 68.0, tempHigh: 86.0, humLow: 60.0, humHigh: 80.0, soilLow: 40, soilHigh: 70, timeOnHour: 7, timeOffHour: 21, luxThreshold: 20000 },
           tips: ["Needs support", "Mist leaves", "Filter sun"],
           guide: ["Keep soil moist but not wet.", "Likes humidity.", "Provide a moss pole."],
-          buyUrl: "https://www.amazon.com/s?k=monstera+plant"
+          buyUrl: "#"
         },
         spider: {
-          name: "Spider Plant", subtitle: "Chlorophytum",
-          img: "https://images.unsplash.com/photo-1572252821143-096f94796c88?w=1000&q=80",
+          name: "Spider Plant", subtitle: "Chlorophytum comosum",
+          img: "https://images.unsplash.com/photo-1664133980546-4e8e41ba06da?auto=format&fit=crop&w=800&q=80",
           display: { temp: "60-75°F", hum: "40-60%", light: "Indirect", water: "Weekly" },
-          settings: {
-             tempLow: 60.0, tempHigh: 75.0,
-             humLow: 40.0, humHigh: 60.0,
-             soilLow: 30, soilHigh: 60,
-             timeOnHour: 8, timeOffHour: 20,
-             luxThreshold: 10000
-          },
-          tips: ["Easy to propagate", "Brown tips = dry"],
+          settings: { tempLow: 60.0, tempHigh: 75.0, humLow: 40.0, humHigh: 60.0, soilLow: 30, soilHigh: 60, timeOnHour: 8, timeOffHour: 20, luxThreshold: 10000 },
+          tips: ["Easy to propagate", "Brown tips = dry", "Fast grower"],
           guide: ["Water well, let drain.", "Avoid direct sun.", "Cut babies to grow new plants."],
-          buyUrl: "https://www.amazon.com/s?k=spider+plant"
+          buyUrl: "#"
         },
         aloe: {
           name: "Aloe Vera", subtitle: "Aloe barbadensis",
-          img: "https://images.unsplash.com/photo-1596547610057-0b1e4c76747b?w=1000&q=80",
+          img: "https://images.unsplash.com/photo-1565964450731-27a34da777a1?auto=format&fit=crop&w=800&q=80",
           display: { temp: "55-80°F", hum: "Dry", light: "Direct", water: "3 Wks" },
-          settings: {
-             tempLow: 55.0, tempHigh: 80.0,
-             humLow: 10.0, humHigh: 40.0,
-             soilLow: 5, soilHigh: 30,
-             timeOnHour: 7, timeOffHour: 19,
-             luxThreshold: 40000
-          },
+          settings: { tempLow: 55.0, tempHigh: 80.0, humLow: 10.0, humHigh: 40.0, soilLow: 5, soilHigh: 30, timeOnHour: 7, timeOffHour: 19, luxThreshold: 40000 },
           tips: ["Harvest gel", "Sun lover", "Sandy soil"],
           guide: ["Deep water, then dry out.", "Sunny windowsill.", "Medicinal gel inside leaves."],
-          buyUrl: "https://www.amazon.com/s?k=aloe+vera+plant"
+          buyUrl: "#"
+        },
+        peace: {
+          name: "Peace Lily", subtitle: "Spathiphyllum",
+          img: "https://images.unsplash.com/photo-1593691509543-c55fb32d8de5?auto=format&fit=crop&w=800&q=80",
+          display: { temp: "65-85°F", hum: "50-70%", light: "Low/Med", water: "Weekly" },
+          settings: { tempLow: 65.0, tempHigh: 85.0, humLow: 50.0, humHigh: 70.0, soilLow: 30, soilHigh: 60, timeOnHour: 8, timeOffHour: 20, luxThreshold: 5000 },
+          tips: ["Leaves droop when thirsty", "Toxic to pets", "Likes humidity"],
+          guide: ["Keep soil consistently moist.", "Wipe leaves to remove dust.", "Low light is perfectly fine."],
+          buyUrl: "#"
+        },
+        zz: {
+          name: "ZZ Plant", subtitle: "Zamioculcas zamiifolia",
+          img: "https://images.unsplash.com/photo-1606256419855-d72ce8675863?auto=format&fit=crop&w=800&q=80",
+          display: { temp: "65-85°F", hum: "30-50%", light: "Low/Med", water: "2-3 Wks" },
+          settings: { tempLow: 65.0, tempHigh: 85.0, humLow: 30.0, humHigh: 50.0, soilLow: 10, soilHigh: 30, timeOnHour: 8, timeOffHour: 20, luxThreshold: 3000 },
+          tips: ["Thrives on neglect", "Drought tolerant", "Very slow grower"],
+          guide: ["Let soil dry out completely.", "Can survive in windowless rooms.", "Don't overwater!"],
+          buyUrl: "#"
+        },
+        fiddle: {
+          name: "Fiddle Leaf Fig", subtitle: "Ficus lyrata",
+          img: "https://images.unsplash.com/photo-1700409804286-64a4666a7f26?auto=format&fit=crop&w=800&q=80",
+          display: { temp: "65-85°F", hum: "40-60%", light: "Bright", water: "1-2 Wks" },
+          settings: { tempLow: 65.0, tempHigh: 85.0, humLow: 40.0, humHigh: 60.0, soilLow: 30, soilHigh: 60, timeOnHour: 7, timeOffHour: 21, luxThreshold: 25000 },
+          tips: ["Hates drafts", "Needs bright light", "Wipe big leaves"],
+          guide: ["Water when top 2 inches are dry.", "Rotate the plant monthly.", "Do not move it often."],
+          buyUrl: "#"
+        },
+        jade: {
+          name: "Jade Plant", subtitle: "Crassula ovata",
+          img: "https://plus.unsplash.com/premium_photo-1675802754634-3e0967bd3fab?auto=format&fit=crop&w=800&q=80",
+          display: { temp: "65-85°F", hum: "30-50%", light: "Bright", water: "2-3 Wks" },
+          settings: { tempLow: 65.0, tempHigh: 85.0, humLow: 30.0, humHigh: 50.0, soilLow: 10, soilHigh: 30, timeOnHour: 7, timeOffHour: 21, luxThreshold: 40000 },
+          tips: ["Money plant", "Easy to propagate", "Store water in leaves"],
+          guide: ["Requires bright direct sunlight.", "Water thoroughly, then let dry.", "Can live for decades."],
+          buyUrl: "#"
+        },
+        rubber: {
+          name: "Rubber Plant", subtitle: "Ficus elastica",
+          img: "https://images.unsplash.com/photo-1669392597221-bbfd4b6e13ff?auto=format&fit=crop&w=800&q=80",
+          display: { temp: "65-85°F", hum: "40-60%", light: "Bright/Med", water: "1-2 Wks" },
+          settings: { tempLow: 65.0, tempHigh: 85.0, humLow: 40.0, humHigh: 60.0, soilLow: 30, soilHigh: 50, timeOnHour: 8, timeOffHour: 20, luxThreshold: 20000 },
+          tips: ["Sap can irritate", "Wipe leaves", "Support when tall"],
+          guide: ["Water when soil is dry to touch.", "Requires indirect bright light.", "Avoid cold drafts."],
+          buyUrl: "#"
         }
       };
 
@@ -197,7 +197,6 @@
       const plantId = (params.get("plant") || "pothos").toLowerCase();
       const p = plants[plantId] || plants["pothos"];
 
-      // Fill Data
       document.getElementById("plantName").textContent = p.name;
       document.getElementById("plantSubtitle").textContent = p.subtitle;
       document.getElementById("plantImg").src = p.img;
@@ -205,10 +204,9 @@
       document.getElementById("light").textContent = p.display.light;
       document.getElementById("water").textContent = p.display.water;
       document.getElementById("temp").textContent = p.display.temp;
-      document.getElementById("humidity").textContent = p.display.hum; // New metric
+      document.getElementById("humidity").textContent = p.display.hum;
       document.getElementById("buyBtn").href = p.buyUrl;
 
-      // Debug Preview
       document.getElementById("debugSettings").textContent = `T:${p.settings.tempLow}-${p.settings.tempHigh} H:${p.settings.humLow}-${p.settings.humHigh}`;
 
       const tipsContainer = document.getElementById("tipsChips");
@@ -230,14 +228,12 @@
         status.textContent = "Fetching current SHA...";
 
         try {
-            // A. Get current file SHA
             const getUrl = `https://api.github.com/repos/${GITHUB_USER}/${GITHUB_REPO}/contents/${FILE_PATH}`;
             const getResp = await fetch(getUrl, { headers: { "Authorization": `token ${GITHUB_TOKEN}` } });
             
             if (!getResp.ok) throw new Error("GitHub Connection Failed");
             const getData = await getResp.json();
             
-            // B. Upload new content
             status.textContent = "Uploading settings...";
             const newContent = JSON.stringify(p.settings, null, 2);
             
@@ -249,7 +245,7 @@
                 },
                 body: JSON.stringify({
                     message: `Update settings for ${p.name}`,
-                    content: btoa(newContent), // Base64 Encode
+                    content: btoa(newContent),
                     sha: getData.sha
                 })
             });

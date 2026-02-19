@@ -5,54 +5,100 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Select a Plant</title>
     <style>
-        body { margin: 0; background: #0b0f0c; color: white; font-family: system-ui, sans-serif; padding: 20px; }
-        h2 { text-align: center; margin-bottom: 25px; font-weight: 400; color: rgba(255,255,255,0.9); }
-        
-        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 15px; max-width: 800px; margin: 0 auto; }
+        :root { --bg: #0b0f0c; --text: rgba(255,255,255,0.92); --muted: rgba(255,255,255,0.6); --radius: 24px; }
+        body { margin: 0; background: var(--bg); color: var(--text); font-family: system-ui, sans-serif; padding: 20px 20px 60px 20px; overflow-x: hidden; }
+        .header { max-width: 600px; margin: 0 auto 30px auto; text-align: center; }
+        .back-btn { display: inline-block; color: var(--muted); text-decoration: none; font-size: 14px; margin-bottom: 15px; transition: color 0.2s; }
+        .back-btn:hover { color: white; }
+        h2 { margin: 0; font-weight: 400; font-size: 28px; letter-spacing: -0.5px; }
+
+        .list-container { display: flex; flex-direction: column; gap: 20px; max-width: 600px; margin: 0 auto; }
         
         .plant-card {
-            background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1);
-            border-radius: 16px; overflow: hidden; text-decoration: none; color: white;
-            transition: 0.2s; display: flex; flex-direction: column;
+            position: relative; height: 160px; border-radius: var(--radius); overflow: hidden; text-decoration: none; color: white;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.4);
+            opacity: 0; transform: translateY(60px) scale(0.9);
+            transition: opacity 0.7s cubic-bezier(0.16, 1, 0.3, 1), transform 0.7s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.3s ease;
+            border: 1px solid rgba(255,255,255,0.05); position: sticky; top: 20px;
         }
-        .plant-card:hover { transform: translateY(-3px); border-color: #2cff8a; }
+        .plant-card.show { opacity: 1; transform: translateY(0) scale(1); }
+        .plant-card:hover { border-color: rgba(44, 255, 138, 0.4); }
         
-        .thumb { height: 120px; width: 100%; object-fit: cover; background: #222; }
-        .info { padding: 12px; }
-        .name { font-weight: bold; font-size: 16px; margin-bottom: 4px; }
-        .sci { font-size: 12px; color: rgba(255,255,255,0.6); font-style: italic; }
-
-        .back-btn { display: block; width: fit-content; margin: 0 auto 20px; color: rgba(255,255,255,0.6); text-decoration: none; }
+        .plant-card img { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; z-index: 1; transition: transform 3s ease; }
+        .plant-card:hover img { transform: scale(1.05); }
+        .overlay { position: absolute; inset: 0; background: linear-gradient(to right, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.3) 60%, transparent 100%); z-index: 2; }
+        
+        .info { position: relative; z-index: 3; padding: 30px; display: flex; flex-direction: column; justify-content: center; height: 100%; box-sizing: border-box; }
+        .name { font-size: 24px; font-weight: 700; margin-bottom: 4px; letter-spacing: -0.5px; }
+        .sci { font-size: 14px; color: var(--muted); font-style: italic; }
+        .metric { display: inline-block; margin-top: 15px; font-size: 12px; background: rgba(255,255,255,0.1); backdrop-filter: blur(5px); padding: 5px 10px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); width: fit-content; }
     </style>
 </head>
 <body>
-    <a href="index.html" class="back-btn">← Back to Menu</a>
-    <h2>Select a Preset</h2>
+    <div class="header">
+        <a href="index.html" class="back-btn">← Back to Menu</a>
+        <h2>Select a Preset</h2>
+    </div>
 
-    <div class="grid">
+    <div class="list-container">
         <a href="plant.html?plant=pothos" class="plant-card">
-            <img src="https://images.unsplash.com/photo-1614594975525-e45190c55d0b?w=400&q=80" class="thumb">
-            <div class="info"><div class="name">Pothos</div><div class="sci">Epipremnum aureum</div></div>
+            <img src="https://plus.unsplash.com/premium_photo-1663962975773-44cfbefe880b?auto=format&fit=crop&w=800&q=80" alt="Pothos">
+            <div class="overlay"></div><div class="info"><div class="name">Pothos</div><div class="sci">Epipremnum aureum</div><div class="metric">🪴 Easy Care</div></div>
         </a>
-
         <a href="plant.html?plant=snake" class="plant-card">
-            <img src="https://images.unsplash.com/photo-1598880940080-ff9a29891b85?w=400&q=80" class="thumb">
-            <div class="info"><div class="name">Snake Plant</div><div class="sci">Sansevieria</div></div>
+            <img src="https://images.unsplash.com/photo-1588709983192-3852c7713145?auto=format&fit=crop&w=800&q=80" alt="Snake Plant">
+            <div class="overlay"></div><div class="info"><div class="name">Snake Plant</div><div class="sci">Sansevieria</div><div class="metric">🌵 Low Water</div></div>
         </a>
-
-        <a href="plant.html?plant=monstera" class="plant-card">
-            <img src="https://images.unsplash.com/photo-1614594975525-e45190c55d0b?w=400&q=80" class="thumb"> <div class="info"><div class="name">Monstera</div><div class="sci">Monstera deliciosa</div></div>
+<a href="plant.html?plant=monstera" class="plant-card">
+            <img src="https://images.unsplash.com/photo-1585598117002-9fb152e67dbf?auto=format&fit=crop&w=800&q=80" alt="Monstera"> 
+            <div class="overlay"></div>
+            <div class="info">
+                <div class="name">Monstera</div>
+                <div class="sci">Monstera deliciosa</div>
+                <div class="metric">🌞 Bright Light</div>
+            </div>
         </a>
-
         <a href="plant.html?plant=spider" class="plant-card">
-            <img src="https://images.unsplash.com/photo-1572252821143-096f94796c88?w=400&q=80" class="thumb">
-            <div class="info"><div class="name">Spider Plant</div><div class="sci">Chlorophytum</div></div>
+            <img src="https://images.unsplash.com/photo-1664133980546-4e8e41ba06da?auto=format&fit=crop&w=800&q=80" alt="Spider Plant">
+            <div class="overlay"></div><div class="info"><div class="name">Spider Plant</div><div class="sci">Chlorophytum</div><div class="metric">💧 Likes Humidity</div></div>
         </a>
-
         <a href="plant.html?plant=aloe" class="plant-card">
-            <img src="https://images.unsplash.com/photo-1596547610057-0b1e4c76747b?w=400&q=80" class="thumb">
-            <div class="info"><div class="name">Aloe Vera</div><div class="sci">Aloe barbadensis</div></div>
+            <img src="https://images.unsplash.com/photo-1565964450731-27a34da777a1?auto=format&fit=crop&w=800&q=80" alt="Aloe Vera">
+            <div class="overlay"></div><div class="info"><div class="name">Aloe Vera</div><div class="sci">Aloe barbadensis</div><div class="metric">☀️ Direct Sun</div></div>
+        </a>
+        <a href="plant.html?plant=peace" class="plant-card">
+            <img src="https://images.unsplash.com/photo-1593691509543-c55fb32d8de5?auto=format&fit=crop&w=800&q=80" alt="Peace Lily">
+            <div class="overlay"></div><div class="info"><div class="name">Peace Lily</div><div class="sci">Spathiphyllum</div><div class="metric">✨ Shade Tolerant</div></div>
+        </a>
+        <a href="plant.html?plant=zz" class="plant-card">
+            <img src="https://images.unsplash.com/photo-1606256419855-d72ce8675863?auto=format&fit=crop&w=800&q=80" alt="ZZ Plant">
+            <div class="overlay"></div><div class="info"><div class="name">ZZ Plant</div><div class="sci">Zamioculcas zamiifolia</div><div class="metric">🖤 Indestructible</div></div>
+        </a>
+        <a href="plant.html?plant=fiddle" class="plant-card">
+            <img src="https://images.unsplash.com/photo-1700409804286-64a4666a7f26?auto=format&fit=crop&w=800&q=80" alt="Fiddle Leaf Fig">
+            <div class="overlay"></div><div class="info"><div class="name">Fiddle Leaf Fig</div><div class="sci">Ficus lyrata</div><div class="metric">🌳 Statement Plant</div></div>
+        </a>
+        <a href="plant.html?plant=jade" class="plant-card">
+            <img src="https://plus.unsplash.com/premium_photo-1675802754634-3e0967bd3fab?auto=format&fit=crop&w=800&q=80" alt="Jade Plant">
+            <div class="overlay"></div><div class="info"><div class="name">Jade Plant</div><div class="sci">Crassula ovata</div><div class="metric">🪙 Money Tree</div></div>
+        </a>
+        <a href="plant.html?plant=rubber" class="plant-card">
+            <img src="https://images.unsplash.com/photo-1669392597221-bbfd4b6e13ff?auto=format&fit=crop&w=800&q=80" alt="Rubber Plant">
+            <div class="overlay"></div><div class="info"><div class="name">Rubber Plant</div><div class="sci">Ficus elastica</div><div class="metric">🌿 Moody Foliage</div></div>
         </a>
     </div>
+
+    <script>
+        const observerOptions = { root: null, rootMargin: '0px', threshold: 0.15 };
+        const observer = new IntersectionObserver((entries, observer) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('show');
+                    observer.unobserve(entry.target);
+                }
+            });
+        }, observerOptions);
+        document.querySelectorAll('.plant-card').forEach(card => observer.observe(card));
+    </script>
 </body>
 </html>

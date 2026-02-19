@@ -3,39 +3,210 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Smart Enclosure</title>
+    <title>Smart Enclosure | Home</title>
     <style>
-        body { margin: 0; background: #0b0f0c; color: white; font-family: system-ui, sans-serif; height: 100vh; display: flex; align-items: center; justify-content: center; }
-        .menu-container { display: flex; flex-direction: column; gap: 20px; width: 90%; max-width: 400px; text-align: center; }
-        h1 { margin-bottom: 10px; font-weight: 300; letter-spacing: 1px; }
-        
-        .big-btn {
-            display: flex; flex-direction: column; align-items: center; justify-content: center;
-            padding: 30px; border-radius: 20px;
-            background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);
-            color: white; text-decoration: none; transition: 0.2s;
+        :root { 
+            --bg: #0b0f0c; 
+            --card-bg: rgba(255,255,255,0.03);
+            --text: rgba(255,255,255,0.92); 
+            --muted: rgba(255,255,255,0.6); 
+            --radius: 24px; 
+            --plant-glow: rgba(44, 255, 138, 0.15);
+            --control-glow: rgba(79, 153, 255, 0.15);
         }
-        .big-btn:hover { background: rgba(255,255,255,0.1); transform: translateY(-2px); border-color: rgba(255,255,255,0.3); }
-        .icon { font-size: 40px; margin-bottom: 10px; }
-        .label { font-size: 20px; font-weight: bold; }
-        .sub { font-size: 14px; color: rgba(255,255,255,0.6); margin-top: 5px; }
+        
+        body { 
+            margin: 0; 
+            background: var(--bg); 
+            color: var(--text); 
+            font-family: system-ui, sans-serif; 
+            padding: 40px 20px 60px 20px; 
+            overflow-x: hidden; 
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .header { 
+            max-width: 600px; 
+            width: 100%;
+            margin: 0 auto 40px auto; 
+            text-align: center; 
+        }
+        
+        h1 { 
+            margin: 0; 
+            font-weight: 300; 
+            font-size: 36px; 
+            letter-spacing: 2px; 
+        }
+        
+        .subtitle {
+            color: var(--muted);
+            margin-top: 10px;
+            font-size: 16px;
+        }
+
+        .list-container { 
+            display: flex; 
+            flex-direction: column; 
+            gap: 25px; 
+            max-width: 600px; 
+            width: 100%;
+            margin: 0 auto; 
+        }
+        
+        /* --- MAIN MENU CARDS --- */
+        .main-card {
+            position: relative; 
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            min-height: 160px; 
+            border-radius: var(--radius); 
+            text-decoration: none; 
+            color: white;
+            padding: 30px 40px;
+            box-sizing: border-box;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.4);
+            
+            /* Initial Animation State */
+            opacity: 0; 
+            transform: translateY(60px) scale(0.9);
+            transition: opacity 0.7s cubic-bezier(0.16, 1, 0.3, 1), 
+                        transform 0.7s cubic-bezier(0.16, 1, 0.3, 1), 
+                        border-color 0.3s ease, box-shadow 0.3s ease;
+            
+            border: 1px solid rgba(255,255,255,0.08); 
+            backdrop-filter: blur(12px);
+        }
+
+        .main-card.show { 
+            opacity: 1; 
+            transform: translateY(0) scale(1); 
+        }
+        
+        /* AMBIENT LIGHTING BACKGROUNDS */
+        .card-plant {
+            background: radial-gradient(circle at 85% 50%, var(--plant-glow), transparent 50%), var(--card-bg);
+        }
+        .card-control {
+            background: radial-gradient(circle at 85% 50%, var(--control-glow), transparent 50%), var(--card-bg);
+        }
+
+        /* Hover Effects */
+        .card-plant:hover { border-color: rgba(44, 255, 138, 0.3); box-shadow: 0 20px 50px rgba(44, 255, 138, 0.05); }
+        .card-control:hover { border-color: rgba(79, 153, 255, 0.3); box-shadow: 0 20px 50px rgba(79, 153, 255, 0.05); }
+        
+        /* Layout for Text (Left) and Icon (Right) */
+        .content-left {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            max-width: 65%;
+            z-index: 2;
+        }
+
+        .icon-right {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 2;
+        }
+
+        /* Image styling for the Freepik PNGs */
+        .icon-right img {
+            width: 80px;
+            height: 80px;
+            object-fit: contain;
+            transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+            filter: drop-shadow(0px 4px 10px rgba(0,0,0,0.4));
+        }
+        
+        /* Animate the PNGs on card hover */
+        .main-card:hover .icon-right img { 
+            transform: scale(1.1) rotate(2deg); 
+        }
+        
+        .name { 
+            font-size: 26px; 
+            font-weight: 700; 
+            margin-bottom: 8px; 
+            letter-spacing: -0.5px; 
+        }
+        
+        .desc { 
+            font-size: 14px; 
+            color: var(--muted); 
+            line-height: 1.5;
+        }
+        
+        .metric { 
+            display: inline-flex; 
+            align-items: center;
+            gap: 6px;
+            margin-top: 18px; 
+            font-size: 12px; 
+            font-weight: 600;
+            background: rgba(255,255,255,0.05); 
+            padding: 6px 12px; 
+            border-radius: 8px; 
+            border: 1px solid rgba(255,255,255,0.1); 
+            width: fit-content; 
+        }
+        
+        @media (max-width: 520px) {
+            .main-card { padding: 25px 20px; }
+            .content-left { max-width: 60%; }
+            .icon-right img { width: 60px; height: 60px; }
+            .name { font-size: 22px; }
+        }
     </style>
 </head>
 <body>
-    <div class="menu-container">
+    <div class="header">
         <h1>GARDEN OS</h1>
-        
-        <a href="list.html" class="big-btn">
-            <span class="icon">🌿</span>
-            <span class="label">Plant Database</span>
-            <span class="sub">Browse presets for common plants</span>
+        <div class="subtitle">Select an operation mode</div>
+    </div>
+
+    <div class="list-container">
+        <a href="list.html" class="main-card card-plant">
+            <div class="content-left">
+                <div class="name">Plant Database</div>
+                <div class="desc">Browse environmental presets for common houseplants.</div>
+                <div class="metric">🌿 View Library</div>
+            </div>
+            <div class="icon-right">
+                <img src="https://cdn-icons-png.freepik.com/512/7213/7213040.png" alt="Database Icon">
+            </div>
         </a>
 
-        <a href="#" class="big-btn" onclick="alert('Manual Control Page coming soon!')">
-            <span class="icon">🎛️</span>
-            <span class="label">Manual Control</span>
-            <span class="sub">Adjust specific sensor values</span>
+        <a href="#" class="main-card card-control" onclick="alert('Manual Control Page coming soon!')">
+            <div class="content-left">
+                <div class="name">Manual Control</div>
+                <div class="desc">Directly adjust temperature, humidity, and lighting thresholds.</div>
+                <div class="metric">🎛️ Advanced Settings</div>
+            </div>
+            <div class="icon-right">
+                <img src="https://cdn-icons-png.freepik.com/512/16493/16493859.png" alt="Control Panel Icon">
+            </div>
         </a>
     </div>
+
+    <script>
+        const observerOptions = { root: null, rootMargin: '0px', threshold: 0.15 };
+        const observer = new IntersectionObserver((entries, observer) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('show');
+                    observer.unobserve(entry.target);
+                }
+            });
+        }, observerOptions);
+        
+        document.querySelectorAll('.main-card').forEach(card => observer.observe(card));
+    </script>
 </body>
 </html>
