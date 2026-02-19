@@ -228,41 +228,46 @@
         };
 
         // --- 1. LOAD CURRENT SETTINGS ON STARTUP ---
-        async function fetchCurrentSettings() {
-            loadingOverlay.style.display = "block";
-            formWrapper.style.display = "none";
-            
-            try {
-                const getUrl = `https://api.github.com/repos/${GITHUB_USER}/${GITHUB_REPO}/contents/${FILE_PATH}`;
-                const response = await fetch(getUrl, { 
-                    headers: { "Authorization": `token ${GITHUB_TOKEN}` },
-                    cache: "no-store" // Prevent browser caching old settings
-                });
-                
-                if (!response.ok) throw new Error("Could not fetch file from GitHub.");
-                
-                const data = await response.json();
-                currentFileSha = data.sha; // Save SHA for pushing updates later
-                
-                // Decode the Base64 content from GitHub
-                const jsonText = atob(data.content);
-                const settings = JSON.parse(jsonText);
+async function fetchCurrentSettings() {
+    loadingOverlay.style.display = "block";
+    formWrapper.style.display = "none";
+    
+    try {
+        const getUrl = `https://api.github.com/repos/${GITHUB_USER}/${GITHUB_REPO}/contents/${FILE_PATH}`;
+        const response = await fetch(getUrl, { 
+            headers: { 
+                "Authorization": `Bearer ${GITHUB_TOKEN}`,
+                "Accept": "application/vnd.github+json"
+            },
+            cache: "no-store" 
+        });
+        
+        if (!response.ok) {
+            const errorBody = await response.json();
+            // This will show you exactly what GitHub's server said
+            throw new Error(`GitHub ${response.status}: ${errorBody.message}`);
+        }
+        
+        const data = await response.json();
+        currentFileSha = data.sha; // Save this for the PUT request later
+        
+        const jsonText = atob(data.content);
+        const settings = JSON.parse(jsonText);
 
-                // Populate the form fields with the data
-                for (const key in inputs) {
-                    if (settings[key] !== undefined) {
-                        inputs[key].value = settings[key];
-                    }
-                }
-
-                loadingOverlay.style.display = "none";
-                formWrapper.style.display = "flex";
-
-            } catch (err) {
-                console.error(err);
-                loadingOverlay.textContent = "❌ Failed to load settings: " + err.message;
+        for (const key in inputs) {
+            if (settings[key] !== undefined) {
+                inputs[key].value = settings[key];
             }
         }
+
+        loadingOverlay.style.display = "none";
+        formWrapper.style.display = "flex";
+
+    } catch (err) {
+        console.error(err);
+        loadingOverlay.innerHTML = `❌ Connection Failed<br><small style="color:white">${err.message}</small>`;
+    }
+}
 
         // --- 2. PUSH NEW SETTINGS TO GITHUB ---
         sendBtn.addEventListener("click", async () => {
