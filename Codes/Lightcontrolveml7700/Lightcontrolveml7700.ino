@@ -137,7 +137,6 @@ void loop() {
         ledOff();
         Serial.print("OFF (timer end, in-between). Lux: ");
         Serial.println(lux);
-        // I love you please change 
       }
     }
   }
