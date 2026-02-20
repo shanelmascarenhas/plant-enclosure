@@ -91,6 +91,7 @@
       </div>
     </div>
 
+<script>
 
       // --- 2. PLANT DATA ---
       const plants = {
@@ -247,6 +248,43 @@ sendBtn.addEventListener("click", async () => {
   }
 });
 
+        try {
+            const getUrl = `https://api.github.com/repos/${GITHUB_USER}/${GITHUB_REPO}/contents/${FILE_PATH}`;
+            const getResp = await fetch(getUrl, { headers: { "Authorization": `token ${GITHUB_TOKEN}` } });
+            
+            if (!getResp.ok) throw new Error("GitHub Connection Failed");
+            const getData = await getResp.json();
+            
+            status.textContent = "Uploading settings...";
+            const newContent = JSON.stringify(p.settings, null, 2);
+            
+            const putResp = await fetch(getUrl, {
+                method: "PUT",
+                headers: {
+                    "Authorization": `token ${GITHUB_TOKEN}`,
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    message: `Update settings for ${p.name}`,
+                    content: btoa(newContent),
+                    sha: getData.sha
+                })
+            });
 
+            if (!putResp.ok) throw new Error("Upload Failed");
+
+            status.textContent = "✅ Settings updated in Cloud!";
+            sendBtn.textContent = "Sent Successfully";
+            sendBtn.style.background = "#2cff8a";
+            sendBtn.style.color = "#000";
+
+        } catch (err) {
+            console.error(err);
+            status.textContent = "❌ " + err.message;
+            sendBtn.textContent = "Retry";
+            sendBtn.disabled = false;
+        }
+      });
+    </script>
   </body>
 </html>
