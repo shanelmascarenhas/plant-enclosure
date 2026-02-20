@@ -247,6 +247,9 @@ sendBtn.addEventListener("click", async () => {
     sendBtn.disabled = false;
   }
 });
+<<<<<<< HEAD
+ // 1234 balls
+=======
 
         try {
             const getUrl = `https://api.github.com/repos/${GITHUB_USER}/${GITHUB_REPO}/contents/${FILE_PATH}`;
@@ -270,6 +273,7 @@ sendBtn.addEventListener("click", async () => {
                     sha: getData.sha
                 })
             });
+>>>>>>> d6399dbd99b43162c7163d2404e0e8c01e8ed3b1
 
             if (!putResp.ok) throw new Error("Upload Failed");
 
