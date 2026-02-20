@@ -1,6 +1,8 @@
 #include <Arduino.h>
 #include <Wire.h>
 #include <U8g2lib.h>
+#include <WiFi.h>
+#include <WiFiManager.h>
 
 /* ==========================================
  * PIN DEFINITIONS
@@ -52,35 +54,19 @@ U8G2_SSD1306_128X32_UNIVISION_F_HW_I2C bottomDisplay(U8G2_R0, /* clock=*/ 22, /*
 /* ==========================================
  * GLOBAL VARIABLES
  * ========================================== */
-
-// Sensor Thresholds
-float tempLow = 68.0; float tempHigh = 77.0; 
-float humLow = 40.0;  float humHigh = 80.0;
-int soilLow = 30;     int soilHigh = 70;
-
-// Light / Timer Variables
+float tempLow = 68.0, tempHigh = 77.0, humLow = 40.0, humHigh = 80.0;
+int soilLow = 30, soilHigh = 70, globalBrightness = 10;
 bool timerEnabled = false;
-int timeOnHour = 8;   int timeOnMinute = 0;   
-int timeOffHour = 20; int timeOffMinute = 0; 
+int timeOnHour = 8, timeOnMinute = 0, timeOffHour = 20, timeOffMinute = 0; 
 long luxThreshold = 30000; 
-
-// System Settings
-int globalBrightness = 10; 
-
-// System Clock
-int currentHour = 12; 
-int currentMinute = 0;
+int currentHour = 12, currentMinute = 0;
 unsigned long lastMinuteTick = 0;
 
 // Edit State Helpers
-float* pEditVal1 = nullptr; 
-float* pEditVal2 = nullptr; 
-float editCurrent = 0;      
-int editStep = 0;           
-float currentMinLimit = 0;
-float currentMaxLimit = 100;
-String editUnit = ""; 
-String currentHeaderName = "-- MAIN MENU --";
+float *pEditVal1 = nullptr, *pEditVal2 = nullptr, editCurrent = 0;
+int editStep = 0;
+float currentMinLimit = 0, currentMaxLimit = 100;
+String editUnit = "", currentHeaderName = "-- MAIN MENU --";
 int tempOnH, tempOnM, tempOffH, tempOffM;
 
 // Menu Logic Structures
@@ -91,35 +77,18 @@ struct MenuItem {
   uint8_t childCount;
 };
 
-enum UIState { 
-  STATE_MENU, 
-  STATE_SUBMENU, 
-  STATE_EDIT_DUAL, 
-  STATE_EDIT_TIME, 
-  STATE_EDIT_LUX, 
-  STATE_EDIT_BRIGHTNESS,
-  STATE_SENSOR_TEST 
-};
-
+enum UIState { STATE_MENU, STATE_SUBMENU, STATE_EDIT_DUAL, STATE_EDIT_TIME, STATE_EDIT_LUX, STATE_EDIT_BRIGHTNESS, STATE_SENSOR_TEST };
 UIState uiState = STATE_MENU;
-
-MenuItem* currentMenu = nullptr;
-uint8_t currentMenuSize = 0;
-int selectedIndex = 0;
-int menuScrollOffset = 0;
+MenuItem *currentMenu = nullptr, *menuStack[6];
+uint8_t currentMenuSize = 0, menuSizeStack[6], stackDepth = 0;
+int selectedIndex = 0, menuScrollOffset = 0, indexStack[6];
 const int VISIBLE_ITEMS = 4;
-
-MenuItem* menuStack[6];
-uint8_t menuSizeStack[6];
-int indexStack[6];
-int stackDepth = 0;
 
 // Encoder Variables
 volatile int encoderCount = 0;
 int lastEncoderCount = 0;
 static const int8_t enc_states[] = {0,-1,1,0,1,0,0,-1,-1,0,0,1,0,1,-1,0};
 static uint8_t old_AB = 0;
-
 /* ==========================================
  * INTERRUPT ROUTINES
  * ========================================== */
@@ -134,17 +103,10 @@ void IRAM_ATTR readEncoder() {
 /* ==========================================
  * FORWARD DECLARATIONS
  * ========================================== */
-void startEditTemp();
-void startEditHum();
-void startEditSoil();
-void toggleTimer(); 
-void startEditLux();
-void resetGlobal(); 
-void showPH();
-void startSensorTest();
-void startSetClock();
-void startEditBrightness();
-void goBack();
+void startEditTemp(); void startEditHum(); void startEditSoil(); void toggleTimer(); 
+void startEditLux(); void resetGlobal(); void showPH(); void startSensorTest();
+void startSetClock(); void startEditBrightness(); void goBack();
+void startWiFiSetup(); void showWiFiIP(); void resetWiFi(); // WiFi Functions
 
 /* ==========================================
  * MENU DEFINITIONS
@@ -152,14 +114,17 @@ void goBack();
 MenuItem tempItems[] = { {"Set Range", startEditTemp, nullptr, 0}, {"Back", nullptr, nullptr, 0} };
 MenuItem humItems[] = { {"Set Range", startEditHum, nullptr, 0}, {"Back", nullptr, nullptr, 0} };
 MenuItem soilItems[] = { {"Set Range", startEditSoil, nullptr, 0}, {"Back", nullptr, nullptr, 0} };
+MenuItem lightItems[] = { {"Timer: OFF", toggleTimer, nullptr, 0}, {"Set LUX Limit", startEditLux, nullptr, 0}, {"Back", nullptr, nullptr, 0} };
 
-MenuItem lightItems[] = { 
-  {"Timer: OFF", toggleTimer, nullptr, 0}, 
-  {"Set LUX Limit", startEditLux, nullptr, 0}, 
-  {"Back", nullptr, nullptr, 0} 
+MenuItem wifiItems[] = {
+  {"Setup", startWiFiSetup, nullptr, 0},
+  {"Show IP", showWiFiIP, nullptr, 0},
+  {"Reset WiFi", resetWiFi, nullptr, 0},
+  {"Back", nullptr, nullptr, 0}
 };
 
 MenuItem settingsItems[] = {
+  {"WiFi", nullptr, wifiItems, 4},
   {"Set Clock", startSetClock, nullptr, 0},
   {"Brightness", startEditBrightness, nullptr, 0},
   {"Sensor Test", startSensorTest, nullptr, 0},
@@ -173,7 +138,7 @@ MenuItem mainMenu[] = {
   {"Soil Moisture", nullptr, soilItems, 2}, 
   {"Light Control", nullptr, lightItems, 3}, 
   {"pH Level", showPH, nullptr, 0},
-  {"Settings", nullptr, settingsItems, 5}
+  {"Settings", nullptr, settingsItems, 6}
 };
 
 /* ==========================================
@@ -246,13 +211,9 @@ int getCenterX(U8G2 &display, String text) {
 
 void updateBottomMenu(String line1, String line2 = "") {
   bottomDisplay.clearBuffer();
-  
-  // Line 1: Standard Small Font
   bottomDisplay.setFont(u8g2_font_6x10_tf);
   bottomDisplay.setCursor(0, 10);
   bottomDisplay.print(line1);
-  
-  // Line 2: Bold Font
   if(line2 != "") {
     bottomDisplay.setFont(u8g2_font_helvB12_tr);
     bottomDisplay.setCursor(0, 30);
@@ -465,6 +426,50 @@ void updateBottomEdit(String label, float currentVal, String refLabel, float ref
 /* ==========================================
  * ACTION HANDLERS
  * ========================================== */
+void configModeCallback(WiFiManager *myWiFiManager) {
+  topDisplay.clearBuffer();
+  topDisplay.setFont(u8g2_font_6x10_tf);
+  topDisplay.drawStr(10, 20, "WIFI PORTAL OPEN");
+  topDisplay.drawStr(10, 35, "SSID: Plant_Setup");
+  topDisplay.drawStr(10, 50, "PASS: plantadmin");
+  topDisplay.sendBuffer();
+
+  String ip = WiFi.softAPIP().toString();
+  bottomDisplay.clearBuffer();
+  bottomDisplay.setFont(u8g2_font_6x10_tf);
+  bottomDisplay.drawStr(0, 10, "CONNECT NOW AT:");
+  bottomDisplay.setFont(u8g2_font_helvB12_tr);
+  bottomDisplay.drawStr(0, 30, ip.c_str());
+  bottomDisplay.sendBuffer();
+}
+
+void startWiFiSetup() {
+  WiFiManager wm;
+  wm.setAPCallback(configModeCallback);
+  wm.setConfigPortalTimeout(180); // 3 Minute Timeout
+
+  if (!wm.startConfigPortal("Plant_Setup", "plantadmin")) {
+    updateBottomMenu("WiFi Setup", "Timed Out");
+    delay(2000);
+  } else {
+    updateBottomMenu("Connected!", WiFi.localIP().toString());
+    delay(3000);
+  }
+  goBack();
+}
+
+void showWiFiIP() {
+  String status = (WiFi.status() == WL_CONNECTED) ? WiFi.localIP().toString() : "Not Connected";
+  updateBottomMenu("Current IP:", status);
+  delay(3000);
+}
+
+void resetWiFi() {
+  WiFiManager wm;
+  wm.resetSettings(); // Wipes saved credentials
+  updateBottomMenu("WiFi Reset", "Successful");
+  delay(2000);
+}
 
 void startEditTemp() {
   uiState = STATE_EDIT_DUAL; editStep = 0;
@@ -603,14 +608,7 @@ void setup() {
   applyBrightness(globalBrightness);
 
   // Initial UI Setup
-  currentMenu = mainMenu; currentMenuSize = 6; 
-  
-  // Boot Screen
-  topDisplay.clearBuffer();
-  topDisplay.setFont(u8g2_font_helvB14_tr);
-  topDisplay.drawStr(30, 40, "READY");
-  topDisplay.sendBuffer();
-  
+ currentMenu = mainMenu; currentMenuSize = 6; 
   updateBottomMenu("Welcome"); 
   delay(1000);
   
