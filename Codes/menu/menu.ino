@@ -46,6 +46,11 @@ int lastMenuIdx = -1;
 float lastValDisp = -999;   
 int lastStepDisp = -1;      
 
+// Web Notification Trackers
+bool externalUpdateReceived = false;
+unsigned long bottomMsgTimeout = 0;
+bool showingTempMsg = false;
+
 // --- FIREBASE URL ---
 const char* firebaseURL = "https://plant-enclosure-default-rtdb.firebaseio.com/settings.json";
 
@@ -78,7 +83,7 @@ void startEditLux(); void resetGlobal(); void showPH(); void startSensorTest();
 void startSetClock(); void startEditBrightness(); void goBack();
 void startWiFiSetup(); void showWiFiIP(); void resetWiFi();
 void setupServer(); void handleSettingsPost(); void handleOptions();
-void pushToCloud(); // NEW CLOUD PUSH DECLARATION
+void pushToCloud(); 
 
 MenuItem tempItems[] = { { "Set Range", startEditTemp, nullptr, 0 }, { "Back", nullptr, nullptr, 0 } };
 MenuItem humItems[] = { { "Set Range", startEditHum, nullptr, 0 }, { "Back", nullptr, nullptr, 0 } };
@@ -245,6 +250,12 @@ void syncWithCloud() {
     if (doc.containsKey("luxThreshold")) luxThreshold = doc["luxThreshold"];
     if (doc.containsKey("timerEnabled")) timerEnabled = doc["timerEnabled"];
     if (doc.containsKey("globalBrightness")) { globalBrightness = doc["globalBrightness"]; applyBrightness(globalBrightness); }
+    
+    // Show success momentarily
+    updateBottomMenu("Cloud Sync", "Successful!");
+    bottomMsgTimeout = millis() + 2000;
+    showingTempMsg = true;
+    externalUpdateReceived = true;
   }
   http.end();
 }
@@ -268,14 +279,13 @@ void pushToCloud() {
   String jsonOutput;
   serializeJson(doc, jsonOutput);
   
-  // PATCH only updates what we send, it won't delete other database keys
   int httpCode = http.sendRequest("PATCH", jsonOutput);
-  
   if (httpCode > 0) updateBottomMenu("Cloud Update", "Successful!");
   else updateBottomMenu("Cloud Error", String(httpCode));
   
   http.end();
   delay(1000);
+  lastMenuIdx = -1; // Reset hover context when returning
 }
 
 void addCORS() { server.sendHeader("Access-Control-Allow-Origin", "*"); server.sendHeader("Access-Control-Allow-Methods", "POST, GET, OPTIONS"); server.sendHeader("Access-Control-Allow-Headers", "Content-Type"); }
@@ -293,6 +303,13 @@ void handleSettingsPost() {
     if (doc.containsKey("luxThreshold")) luxThreshold = doc["luxThreshold"];
     if (doc.containsKey("timerEnabled")) timerEnabled = doc["timerEnabled"];
     if (doc.containsKey("globalBrightness")) { globalBrightness = doc["globalBrightness"]; applyBrightness(globalBrightness); }
+    
+    // --- TRIGGER THE VISUAL CONFIRMATION ---
+    updateBottomMenu("Web Update", "Received!");
+    bottomMsgTimeout = millis() + 2000;  // Show message for 2 seconds
+    showingTempMsg = true;               // Lock the bottom screen from being overwritten
+    externalUpdateReceived = true;       // Tell loop() to force redraw the top UI
+    
     server.send(200, "application/json", "{\"status\":\"ok\"}");
   }
 }
@@ -311,9 +328,8 @@ void setup() {
   attachInterrupt(digitalPinToInterrupt(ENC_DT), readEncoder, CHANGE);
 
   Wire.begin(I2C_SDA, I2C_SCL);
-  topDisplay.setBusClock(100000); bottomDisplay.setBusClock(100000);  
-  bottomDisplay.setI2CAddress(BOTTOM_ADDR * 2); bottomDisplay.begin();
   topDisplay.setI2CAddress(TOP_ADDR * 2); topDisplay.begin();
+  bottomDisplay.setI2CAddress(BOTTOM_ADDR * 2); bottomDisplay.begin();
   applyBrightness(globalBrightness);
 
   updateBottomMenu("Connecting WiFi...", "Please wait");
@@ -328,6 +344,19 @@ void loop() {
   updateClock();
   server.handleClient();
   bool uiNeedsDraw = false;
+
+  // --- External Update Trigger ---
+  if (externalUpdateReceived) {
+    uiNeedsDraw = true;
+    externalUpdateReceived = false;
+  }
+
+  // --- Temporary Message Clear Trigger ---
+  if (showingTempMsg && millis() > bottomMsgTimeout) {
+    showingTempMsg = false;
+    lastMenuIdx = -1; // This forces the normal menu context to redraw
+    uiNeedsDraw = true;
+  }
 
   int currentEnc = encoderCount / 4; int diff = lastEncoderCount - currentEnc;
   if (diff != 0) {
@@ -379,7 +408,7 @@ void loop() {
         *pEditVal1 = editCurrent; editStep = 1; editCurrent = *pEditVal2; encoderCount = (int)editCurrent * 4; lastEncoderCount = (int)editCurrent; 
       } else { 
         *pEditVal2 = editCurrent; updateBottomMenu("RANGE", "SAVED"); 
-        pushToCloud(); // PUSH DATA TO FIREBASE
+        pushToCloud();
         goBack(); 
       }
     }
@@ -391,7 +420,7 @@ void loop() {
         else { 
           tempOffM = (int)editCurrent; timeOnHour = tempOnH; timeOnMinute = tempOnM; timeOffHour = tempOffH; timeOffMinute = tempOffM; 
           updateBottomMenu("SCHEDULE", "SAVED"); 
-          pushToCloud(); // PUSH DATA TO FIREBASE
+          pushToCloud();
           goBack(); 
         }
         encoderCount = (int)editCurrent * 4; lastEncoderCount = (int)editCurrent; delay(200);
@@ -403,12 +432,12 @@ void loop() {
     }
     else if (uiState == STATE_EDIT_LUX) {
       luxThreshold = (long)editCurrent; updateBottomMenu("LUX LIMIT", "SAVED"); 
-      pushToCloud(); // PUSH DATA TO FIREBASE
+      pushToCloud();
       goBack();
     } 
     else if (uiState == STATE_EDIT_BRIGHTNESS) {
       updateBottomMenu("BRIGHTNESS", "SAVED"); 
-      pushToCloud(); // PUSH DATA TO FIREBASE
+      pushToCloud();
       goBack();
     } 
     else if (uiState == STATE_SENSOR_TEST) { goBack(); }
@@ -436,7 +465,12 @@ void loop() {
         }
       }
       topDisplay.sendBuffer();
-      if (selectedIndex != lastMenuIdx) { showHoverContext(currentMenu[selectedIndex].name); lastMenuIdx = selectedIndex; }
+      
+      // ONLY update the hover context if we are NOT currently showing a web notification!
+      if (selectedIndex != lastMenuIdx && !showingTempMsg) { 
+        showHoverContext(currentMenu[selectedIndex].name); 
+        lastMenuIdx = selectedIndex; 
+      }
     }
     else if (uiState == STATE_EDIT_DUAL) {
       int valL = (editStep == 0) ? (int)editCurrent : (int)*pEditVal1; int valH = (editStep == 1) ? (int)editCurrent : (int)*pEditVal2;
