@@ -12,7 +12,7 @@
             --muted: rgba(255,255,255,0.6); 
             --stroke: rgba(255,255,255,0.12); 
             --radius: 18px; 
-            --accent: #4f99ff; /* Blue accent for control panel */
+            --accent: #4f99ff; 
         }
         
         body { 
@@ -163,6 +163,16 @@
     <div class="form-container" id="formWrapper" style="display: none;">
         
         <div class="control-group">
+            <div class="group-title">🔌 Device Connection</div>
+            <div class="input-grid">
+                <div class="input-box" style="grid-column: span 2;">
+                    <label>ESP32 IP Address</label>
+                    <input type="text" id="espIp" placeholder="e.g. 192.168.1.100">
+                </div>
+            </div>
+        </div>
+
+        <div class="control-group">
             <div class="group-title">🌡️ Environment Ranges</div>
             <div class="input-grid">
                 <div class="input-box"><label>Temp Low (°F)</label><input type="number" id="tempLow" step="0.1"></div>
@@ -196,16 +206,11 @@
 
     <script>
         // --- GITHUB CONFIGURATION ---
-
-      const GITHUB_USER = "Group3CapstonePlantEnclosure";
-
-      const GITHUB_REPO = "plant-enclosure";
-
-      const GITHUB_TOKEN = "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"; 
-
+        const GITHUB_USER = "Group3CapstonePlantEnclosure";
+        const GITHUB_REPO = "plant-enclosure";
+        const GITHUB_TOKEN = "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"; 
         const FILE_PATH = "settings.json";
-
-let currentFileSha = ""; 
+        let currentFileSha = ""; 
 
         const formWrapper = document.getElementById("formWrapper");
         const loadingOverlay = document.getElementById("loadingOverlay");
@@ -213,6 +218,7 @@ let currentFileSha = "";
         const statusMsg = document.getElementById("statusMsg");
 
         const inputs = {
+            espIp: document.getElementById("espIp"), // Added IP to inputs
             tempLow: document.getElementById("tempLow"),
             tempHigh: document.getElementById("tempHigh"),
             humLow: document.getElementById("humLow"),
@@ -224,7 +230,13 @@ let currentFileSha = "";
             luxThreshold: document.getElementById("luxThreshold")
         };
 
-        // --- 1. LOAD CURRENT SETTINGS ON STARTUP ---
+        // Load saved IP address if it exists
+        const savedIp = localStorage.getItem("esp32_ip");
+        if (savedIp) {
+            inputs.espIp.value = savedIp;
+        }
+
+        // --- 1. LOAD CURRENT SETTINGS FROM GITHUB ON STARTUP ---
         async function fetchCurrentSettings() {
             loadingOverlay.style.display = "block";
             formWrapper.style.display = "none";
@@ -233,7 +245,7 @@ let currentFileSha = "";
                 const getUrl = `https://api.github.com/repos/${GITHUB_USER}/${GITHUB_REPO}/contents/${FILE_PATH}`;
                 const response = await fetch(getUrl, { 
                     headers: { 
-                        "Authorization": `Bearer ${GITHUB_TOKEN}`, // Standard for Fine-grained
+                        "Authorization": `Bearer ${GITHUB_TOKEN}`,
                         "Accept": "application/vnd.github+json"
                     },
                     cache: "no-store" 
@@ -250,8 +262,8 @@ let currentFileSha = "";
                 const jsonText = atob(data.content);
                 const settings = JSON.parse(jsonText);
 
-                for (const key in inputs) {
-                    if (settings[key] !== undefined) {
+                for (const key in settings) {
+                    if (inputs[key] !== undefined) {
                         inputs[key].value = settings[key];
                     }
                 }
@@ -265,11 +277,21 @@ let currentFileSha = "";
             }
         }
 
-        // --- 2. PUSH NEW SETTINGS TO GITHUB ---
+        // --- 2. PUSH NEW SETTINGS TO ESP32 & GITHUB ---
         sendBtn.addEventListener("click", async () => {
+            const targetIp = inputs.espIp.value.trim();
+            
+            if (!targetIp) {
+                alert("Please enter the ESP32 IP Address first!");
+                inputs.espIp.focus();
+                return;
+            }
+
             sendBtn.disabled = true;
             sendBtn.textContent = "Uploading...";
-            statusMsg.textContent = "Packaging new configuration...";
+            
+            // Save the IP address so the user doesn't have to type it again
+            localStorage.setItem("esp32_ip", targetIp);
 
             try {
                 const newSettings = {
@@ -284,16 +306,28 @@ let currentFileSha = "";
                     luxThreshold: parseInt(inputs.luxThreshold.value)
                 };
 
+                // STEP 1: PUSH DIRECTLY TO ESP32
+                statusMsg.textContent = "Pushing to ESP32...";
+                const espUrl = targetIp.startsWith('http') ? `${targetIp}/settings` : `http://${targetIp}/settings`;
+                
+                const espRes = await fetch(espUrl, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(newSettings)
+                });
+
+                if (!espRes.ok) throw new Error("ESP32 refused connection. Check IP.");
+
+                // STEP 2: SYNC TO GITHUB (Backup)
+                statusMsg.textContent = "ESP32 Updated! Syncing to GitHub...";
                 const newContentText = JSON.stringify(newSettings, null, 2);
                 const encodedContent = btoa(newContentText);
-
-                statusMsg.textContent = "Sending to GitHub...";
 
                 const putUrl = `https://api.github.com/repos/${GITHUB_USER}/${GITHUB_REPO}/contents/${FILE_PATH}`;
                 const putResp = await fetch(putUrl, {
                     method: "PUT",
                     headers: {
-                        "Authorization": `Bearer ${GITHUB_TOKEN}`, // Changed 'token' to 'Bearer' here too!
+                        "Authorization": `Bearer ${GITHUB_TOKEN}`,
                         "Accept": "application/vnd.github+json",
                         "Content-Type": "application/json"
                     },
@@ -306,13 +340,14 @@ let currentFileSha = "";
 
                 if (!putResp.ok) {
                     const errorBody = await putResp.json();
-                    throw new Error(`GitHub ${putResp.status}: ${errorBody.message}`);
+                    throw new Error(`GitHub Sync Failed ${putResp.status}: ${errorBody.message}`);
                 }
                 
                 const putData = await putResp.json();
                 currentFileSha = putData.content.sha; 
 
-                statusMsg.textContent = "✅ Settings successfully updated!";
+                // SUCCESS
+                statusMsg.textContent = "✅ Enclosure & Cloud successfully updated!";
                 sendBtn.textContent = "Update Successful";
                 sendBtn.style.background = "#2cff8a";
                 sendBtn.style.color = "#000";
@@ -328,12 +363,13 @@ let currentFileSha = "";
 
             } catch (err) {
                 console.error(err);
-                statusMsg.textContent = "❌ Error: " + err.message;
+                statusMsg.innerHTML = `❌ Error: ${err.message}`;
                 sendBtn.disabled = false;
                 sendBtn.textContent = "Try Again";
             }
         });
 
+        // Initialize
         fetchCurrentSettings();
     </script>
 </body>

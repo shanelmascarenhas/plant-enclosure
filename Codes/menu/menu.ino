@@ -677,14 +677,23 @@ void setup() {
   lastMinuteTick = millis();
 
   //Wifi Setup
+  updateBottomMenu("Connecting WiFi...", "Please wait");
+  
   WiFiManager wm;
+  // Set a short timeout (10 seconds) so it doesn't hang the boot process
+  wm.setConfigPortalTimeout(10); 
+
   bool res = wm.autoConnect("Plant_Setup", "plantadmin");
 
   if (res) {
     Serial.println("WiFi connected!");
-    setupServer();  // <-- ADD THIS
+    updateBottomMenu("WiFi Connected!", WiFi.localIP().toString());
+    setupServer();
+    delay(2000);
   } else {
-    Serial.println("WiFi failed");
+    Serial.println("WiFi failed or timed out");
+    updateBottomMenu("WiFi Skipped", "Use Settings menu");
+    delay(2000);
   }
 }
 /* ==========================================

@@ -93,10 +93,16 @@
 
     <script>
       // =========================
-      // OPTION A: WEBSITE -> ESP32
+      // DYNAMIC ESP32 CONNECTION
       // =========================
-      const ESP32_IP = "http://172.19.40.222";   // <<< CHANGE TO YOUR ESP32 IP
-      const ESP32_SETTINGS_PATH = "/settings";   // <<< change if your ESP32 uses a different path
+      let ESP32_IP = localStorage.getItem("esp32_ip") || "";
+      
+      // Auto-format the IP so it always has http://
+      if (ESP32_IP && !ESP32_IP.startsWith("http")) {
+          ESP32_IP = "http://" + ESP32_IP;
+      }
+      
+      const ESP32_SETTINGS_PATH = "/settings"; 
 
       // --- PLANT DATA ---
       const plants = {
@@ -107,7 +113,7 @@
           settings: { tempLow: 65.0, tempHigh: 85.0, humLow: 40.0, humHigh: 60.0, soilLow: 20, soilHigh: 50, timeOnHour: 9, timeOffHour: 19, luxThreshold: 5000 },
           tips: ["Rotate weekly", "Wipe leaves", "Avoid harsh sun"],
           guide: ["Water when top 2cm is dry.", "Thrives in indirect light.", "Fertilize in Spring."],
-          buyUrl: "#"
+          buyUrl: "https://www.amazon.com/s?k=pothos+plant"
         },
         snake: {
           name: "Snake Plant", subtitle: "Sansevieria",
@@ -116,7 +122,7 @@
           settings: { tempLow: 60.0, tempHigh: 90.0, humLow: 30.0, humHigh: 50.0, soilLow: 10, soilHigh: 40, timeOnHour: 8, timeOffHour: 20, luxThreshold: 3000 },
           tips: ["Don't overwater", "Wipe dust", "Hardy"],
           guide: ["Let soil dry completely.", "Tolerates low light.", "Use cactus soil."],
-          buyUrl: "#"
+          buyUrl: "https://www.amazon.com/s?k=snake+plant"
         },
         monstera: {
           name: "Monstera", subtitle: "Monstera deliciosa",
@@ -125,7 +131,7 @@
           settings: { tempLow: 68.0, tempHigh: 86.0, humLow: 60.0, humHigh: 80.0, soilLow: 40, soilHigh: 70, timeOnHour: 7, timeOffHour: 21, luxThreshold: 20000 },
           tips: ["Needs support", "Mist leaves", "Filter sun"],
           guide: ["Keep soil moist but not wet.", "Likes humidity.", "Provide a moss pole."],
-          buyUrl: "#"
+          buyUrl: "https://www.amazon.com/s?k=monstera+plant"
         },
         spider: {
           name: "Spider Plant", subtitle: "Chlorophytum comosum",
@@ -134,7 +140,7 @@
           settings: { tempLow: 60.0, tempHigh: 75.0, humLow: 40.0, humHigh: 60.0, soilLow: 30, soilHigh: 60, timeOnHour: 8, timeOffHour: 20, luxThreshold: 10000 },
           tips: ["Easy to propagate", "Brown tips = dry", "Fast grower"],
           guide: ["Water well, let drain.", "Avoid direct sun.", "Cut babies to grow new plants."],
-          buyUrl: "#"
+          buyUrl: "https://www.amazon.com/s?k=spider+plant"
         },
         aloe: {
           name: "Aloe Vera", subtitle: "Aloe barbadensis",
@@ -143,7 +149,7 @@
           settings: { tempLow: 55.0, tempHigh: 80.0, humLow: 10.0, humHigh: 40.0, soilLow: 5, soilHigh: 30, timeOnHour: 7, timeOffHour: 19, luxThreshold: 40000 },
           tips: ["Harvest gel", "Sun lover", "Sandy soil"],
           guide: ["Deep water, then dry out.", "Sunny windowsill.", "Medicinal gel inside leaves."],
-          buyUrl: "#"
+          buyUrl: "https://www.amazon.com/s?k=aloe+vera+plant"
         },
         peace: {
           name: "Peace Lily", subtitle: "Spathiphyllum",
@@ -161,7 +167,7 @@
           settings: { tempLow: 65.0, tempHigh: 85.0, humLow: 30.0, humHigh: 50.0, soilLow: 10, soilHigh: 30, timeOnHour: 8, timeOffHour: 20, luxThreshold: 3000 },
           tips: ["Thrives on neglect", "Drought tolerant", "Very slow grower"],
           guide: ["Let soil dry out completely.", "Can survive in windowless rooms.", "Don't overwater!"],
-          buyUrl: "#"
+          buyUrl: "https://www.amazon.com/s?k=zz+plant"
         },
         fiddle: {
           name: "Fiddle Leaf Fig", subtitle: "Ficus lyrata",
@@ -170,7 +176,7 @@
           settings: { tempLow: 65.0, tempHigh: 85.0, humLow: 40.0, humHigh: 60.0, soilLow: 30, soilHigh: 60, timeOnHour: 7, timeOffHour: 21, luxThreshold: 25000 },
           tips: ["Hates drafts", "Needs bright light", "Wipe big leaves"],
           guide: ["Water when top 2 inches are dry.", "Rotate the plant monthly.", "Do not move it often."],
-          buyUrl: "#"
+          buyUrl: "https://www.amazon.com/s?k=fiddle+leaf+plant"
         },
         jade: {
           name: "Jade Plant", subtitle: "Crassula ovata",
@@ -179,7 +185,7 @@
           settings: { tempLow: 65.0, tempHigh: 85.0, humLow: 30.0, humHigh: 50.0, soilLow: 10, soilHigh: 30, timeOnHour: 7, timeOffHour: 21, luxThreshold: 40000 },
           tips: ["Money plant", "Easy to propagate", "Store water in leaves"],
           guide: ["Requires bright direct sunlight.", "Water thoroughly, then let dry.", "Can live for decades."],
-          buyUrl: "#"
+          buyUrl: "https://www.amazon.com/s?k=jade+plant"
         },
         rubber: {
           name: "Rubber Plant", subtitle: "Ficus elastica",
@@ -188,7 +194,7 @@
           settings: { tempLow: 65.0, tempHigh: 85.0, humLow: 40.0, humHigh: 60.0, soilLow: 30, soilHigh: 50, timeOnHour: 8, timeOffHour: 20, luxThreshold: 20000 },
           tips: ["Sap can irritate", "Wipe leaves", "Support when tall"],
           guide: ["Water when soil is dry to touch.", "Requires indirect bright light.", "Avoid cold drafts."],
-          buyUrl: "#"
+          buyUrl: "https://www.amazon.com/s?k=rubber+plant"
         }
       };
 
@@ -231,9 +237,17 @@
       const status = document.getElementById("statusMsg");
 
       sendBtn.addEventListener("click", async () => {
+        
+        // Failsafe check to ensure we have an IP!
+        if (!ESP32_IP) {
+            alert("⚠️ No ESP32 IP address found! Please go to the Control Panel to enter your device's IP Address first.");
+            window.location.href = "control.html";
+            return;
+        }
+
         sendBtn.disabled = true;
         sendBtn.textContent = "Sending...";
-        status.textContent = "Connecting to enclosure...";
+        status.textContent = "Connecting to enclosure at " + ESP32_IP + "...";
 
         try {
           const res = await fetch(`${ESP32_IP}${ESP32_SETTINGS_PATH}`, {
@@ -250,7 +264,7 @@
           sendBtn.style.color = "#000";
         } catch (err) {
           console.error(err);
-          status.textContent = "❌ Failed to connect";
+          status.textContent = "❌ Failed to connect to " + ESP32_IP;
           sendBtn.textContent = "Retry";
           sendBtn.disabled = false;
         }
