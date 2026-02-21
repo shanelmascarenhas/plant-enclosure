@@ -152,7 +152,7 @@
 
           status.textContent = "Syncing with cloud...";
           const fbRes = await fetch(FIREBASE_URL, {
-              method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(p.settings)
+              method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(p.settings)
           });
           if (!fbRes.ok) throw new Error("Firebase sync failed");
 
