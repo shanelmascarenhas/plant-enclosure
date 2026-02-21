@@ -13,12 +13,31 @@
         h2 { margin: 0; font-weight: 400; font-size: 28px; letter-spacing: -0.5px; }
 
         .list-container { display: flex; flex-direction: column; gap: 20px; max-width: 600px; margin: 0 auto; }
-        
+       
+.plant-card::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: rgba(0,0,0,0);
+    z-index: 4;
+    pointer-events: none;
+    transition: background 0.3s ease;
+}
+.plant-card.dim {
+    filter: brightness(0.7) blur(1px);
+}
+.plant-card.dim::after {
+    background: rgba(0,0,0,0.45);
+}
         .plant-card {
             position: relative; height: 160px; border-radius: var(--radius); overflow: hidden; text-decoration: none; color: white;
             box-shadow: 0 20px 40px rgba(0,0,0,0.4);
             opacity: 0; transform: translateY(60px) scale(0.9);
-            transition: opacity 0.7s cubic-bezier(0.16, 1, 0.3, 1), transform 0.7s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.3s ease;
+            transition:
+    opacity 0.7s cubic-bezier(0.16, 1, 0.3, 1),
+    transform 0.7s cubic-bezier(0.16, 1, 0.3, 1),
+    border-color 0.3s ease,
+    filter 0.3s ease;
             border: 1px solid rgba(255,255,255,0.05); position: sticky; top: 20px;
         }
         .plant-card.show { opacity: 1; transform: translateY(0) scale(1); }
@@ -99,6 +118,25 @@
             });
         }, observerOptions);
         document.querySelectorAll('.plant-card').forEach(card => observer.observe(card));
+
+const cards = document.querySelectorAll('.plant-card');
+
+function updateTopCard() {
+    cards.forEach(card => {
+        const rect = card.getBoundingClientRect();
+
+        // If card is stuck at the sticky position
+        if (rect.top <= 20) {
+            card.classList.add('dim');
+        } else {
+            card.classList.remove('dim');
+        }
+    });
+}
+
+window.addEventListener('scroll', updateTopCard);
+updateTopCard();
+
     </script>
 </body>
 </html>
