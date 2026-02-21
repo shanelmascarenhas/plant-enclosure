@@ -730,7 +730,9 @@ void handleSettingsPost() {
   if (doc.containsKey("luxThreshold")) luxThreshold = doc["luxThreshold"];
 
   // Optional: enable timer automatically if schedule provided
+  if (doc.containsKey("timeOnHour") || doc.containsKey("timeOffHour")) {
   timerEnabled = true;
+}
 
   server.send(200, "application/json", "{\"ok\":true}");
 }
