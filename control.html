@@ -58,7 +58,6 @@
             gap: 20px;
         }
 
-        /* Control Cards */
         .control-group {
             background: var(--card);
             border: 1px solid var(--stroke);
@@ -80,7 +79,6 @@
             gap: 8px;
         }
 
-        /* Grid for Inputs */
         .input-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
@@ -93,10 +91,7 @@
             gap: 6px;
         }
 
-        .input-box label {
-            font-size: 12px;
-            color: var(--muted);
-        }
+        .input-box label { font-size: 12px; color: var(--muted); }
 
         .input-box input {
             background: rgba(0,0,0,0.3);
@@ -116,7 +111,6 @@
             box-shadow: 0 0 0 2px rgba(79, 153, 255, 0.2);
         }
 
-        /* Action Buttons */
         .btn {
             appearance: none; 
             border: none; 
@@ -205,12 +199,8 @@
     </div>
 
     <script>
-        // --- GITHUB CONFIGURATION ---
-        const GITHUB_USER = "Group3CapstonePlantEnclosure";
-        const GITHUB_REPO = "plant-enclosure";
-        const GITHUB_TOKEN = "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"; 
-        const FILE_PATH = "settings.json";
-        let currentFileSha = ""; 
+        // --- FIREBASE CONFIGURATION ---
+        const FIREBASE_URL = "https://plant-enclosure-default-rtdb.firebaseio.com//settings.json"; 
 
         const formWrapper = document.getElementById("formWrapper");
         const loadingOverlay = document.getElementById("loadingOverlay");
@@ -218,7 +208,7 @@
         const statusMsg = document.getElementById("statusMsg");
 
         const inputs = {
-            espIp: document.getElementById("espIp"), // Added IP to inputs
+            espIp: document.getElementById("espIp"),
             tempLow: document.getElementById("tempLow"),
             tempHigh: document.getElementById("tempHigh"),
             humLow: document.getElementById("humLow"),
@@ -230,41 +220,32 @@
             luxThreshold: document.getElementById("luxThreshold")
         };
 
-        // Load saved IP address if it exists
+        // Load saved IP address
         const savedIp = localStorage.getItem("esp32_ip");
-        if (savedIp) {
-            inputs.espIp.value = savedIp;
-        }
+        if (savedIp) inputs.espIp.value = savedIp;
 
-        // --- 1. LOAD CURRENT SETTINGS FROM GITHUB ON STARTUP ---
+        // --- 1. LOAD CURRENT SETTINGS FROM FIREBASE ON STARTUP ---
         async function fetchCurrentSettings() {
+            if(FIREBASE_URL.includes("YOUR_FIREBASE_URL_HERE")) {
+                loadingOverlay.style.display = "block";
+                loadingOverlay.innerHTML = "❌ Please update the FIREBASE_URL in the code first!";
+                return;
+            }
+
             loadingOverlay.style.display = "block";
             formWrapper.style.display = "none";
             
             try {
-                const getUrl = `https://api.github.com/repos/${GITHUB_USER}/${GITHUB_REPO}/contents/${FILE_PATH}`;
-                const response = await fetch(getUrl, { 
-                    headers: { 
-                        "Authorization": `Bearer ${GITHUB_TOKEN}`,
-                        "Accept": "application/vnd.github+json"
-                    },
-                    cache: "no-store" 
-                });
+                const response = await fetch(FIREBASE_URL, { cache: "no-store" });
+                if (!response.ok) throw new Error("Could not connect to Firebase");
                 
-                if (!response.ok) {
-                    const errorBody = await response.json();
-                    throw new Error(`GitHub ${response.status}: ${errorBody.message}`);
-                }
-                
-                const data = await response.json();
-                currentFileSha = data.sha; 
-                
-                const jsonText = atob(data.content);
-                const settings = JSON.parse(jsonText);
+                const settings = await response.json();
 
-                for (const key in settings) {
-                    if (inputs[key] !== undefined) {
-                        inputs[key].value = settings[key];
+                if (settings) {
+                    for (const key in settings) {
+                        if (inputs[key] !== undefined) {
+                            inputs[key].value = settings[key];
+                        }
                     }
                 }
 
@@ -277,9 +258,9 @@
             }
         }
 
-        // --- 2. PUSH NEW SETTINGS TO ESP32 & GITHUB ---
+        // --- 2. PUSH NEW SETTINGS TO ESP32 & FIREBASE ---
         sendBtn.addEventListener("click", async () => {
-            const targetIp = inputs.espIp.value.trim();
+            let targetIp = inputs.espIp.value.trim();
             
             if (!targetIp) {
                 alert("Please enter the ESP32 IP Address first!");
@@ -287,11 +268,12 @@
                 return;
             }
 
+            // Ensure HTTP is present
+            if (!targetIp.startsWith("http")) targetIp = "http://" + targetIp;
+
             sendBtn.disabled = true;
             sendBtn.textContent = "Uploading...";
-            
-            // Save the IP address so the user doesn't have to type it again
-            localStorage.setItem("esp32_ip", targetIp);
+            localStorage.setItem("esp32_ip", inputs.espIp.value.trim());
 
             try {
                 const newSettings = {
@@ -308,9 +290,7 @@
 
                 // STEP 1: PUSH DIRECTLY TO ESP32
                 statusMsg.textContent = "Pushing to ESP32...";
-                const espUrl = targetIp.startsWith('http') ? `${targetIp}/settings` : `http://${targetIp}/settings`;
-                
-                const espRes = await fetch(espUrl, {
+                const espRes = await fetch(`${targetIp}/settings`, {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify(newSettings)
@@ -318,33 +298,15 @@
 
                 if (!espRes.ok) throw new Error("ESP32 refused connection. Check IP.");
 
-                // STEP 2: SYNC TO GITHUB (Backup)
-                statusMsg.textContent = "ESP32 Updated! Syncing to GitHub...";
-                const newContentText = JSON.stringify(newSettings, null, 2);
-                const encodedContent = btoa(newContentText);
-
-                const putUrl = `https://api.github.com/repos/${GITHUB_USER}/${GITHUB_REPO}/contents/${FILE_PATH}`;
-                const putResp = await fetch(putUrl, {
-                    method: "PUT",
-                    headers: {
-                        "Authorization": `Bearer ${GITHUB_TOKEN}`,
-                        "Accept": "application/vnd.github+json",
-                        "Content-Type": "application/json"
-                    },
-                    body: JSON.stringify({
-                        message: "Manual UI update of enclosure settings",
-                        content: encodedContent,
-                        sha: currentFileSha 
-                    })
+                // STEP 2: SYNC TO FIREBASE (Backup)
+                statusMsg.textContent = "ESP32 Updated! Syncing to Cloud...";
+                const putResp = await fetch(FIREBASE_URL, {
+                    method: "PUT", // PUT overwrites the whole 'settings' node
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(newSettings)
                 });
 
-                if (!putResp.ok) {
-                    const errorBody = await putResp.json();
-                    throw new Error(`GitHub Sync Failed ${putResp.status}: ${errorBody.message}`);
-                }
-                
-                const putData = await putResp.json();
-                currentFileSha = putData.content.sha; 
+                if (!putResp.ok) throw new Error("Firebase Sync Failed");
 
                 // SUCCESS
                 statusMsg.textContent = "✅ Enclosure & Cloud successfully updated!";

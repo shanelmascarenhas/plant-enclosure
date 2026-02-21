@@ -93,15 +93,15 @@
 
     <script>
       // =========================
-      // DYNAMIC ESP32 CONNECTION
+      // DYNAMIC CONNECTIONS
       // =========================
-      let ESP32_IP = localStorage.getItem("esp32_ip") || "";
+
+      const FIREBASE_URL = "https://plant-enclosure-default-rtdb.firebaseio.com//settings.json"; 
       
-      // Auto-format the IP so it always has http://
+      let ESP32_IP = localStorage.getItem("esp32_ip") || "";
       if (ESP32_IP && !ESP32_IP.startsWith("http")) {
           ESP32_IP = "http://" + ESP32_IP;
       }
-      
       const ESP32_SETTINGS_PATH = "/settings"; 
 
       // --- PLANT DATA ---
@@ -207,7 +207,6 @@
       document.getElementById("plantName").textContent = p.name;
       document.getElementById("plantSubtitle").textContent = p.subtitle;
       document.getElementById("plantImg").src = p.img;
-
       document.getElementById("light").textContent = p.display.light;
       document.getElementById("water").textContent = p.display.water;
       document.getElementById("temp").textContent = p.display.temp;
@@ -232,39 +231,52 @@
         guideContainer.appendChild(li);
       });
 
-      // --- SEND TO ESP32 LOGIC ---
+      // --- SEND TO ESP32 & FIREBASE LOGIC ---
       const sendBtn = document.getElementById("sendBtn");
       const status = document.getElementById("statusMsg");
 
       sendBtn.addEventListener("click", async () => {
-        
-        // Failsafe check to ensure we have an IP!
         if (!ESP32_IP) {
             alert("⚠️ No ESP32 IP address found! Please go to the Control Panel to enter your device's IP Address first.");
             window.location.href = "control.html";
             return;
         }
 
+        if(FIREBASE_URL.includes("YOUR_FIREBASE_URL_HERE")) {
+            alert("⚠️ Please put your Firebase URL in the plant.html code before pushing!");
+            return;
+        }
+
         sendBtn.disabled = true;
         sendBtn.textContent = "Sending...";
-        status.textContent = "Connecting to enclosure at " + ESP32_IP + "...";
+        status.textContent = "Updating hardware...";
 
         try {
+          // 1. Push to Hardware
           const res = await fetch(`${ESP32_IP}${ESP32_SETTINGS_PATH}`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(p.settings)
           });
-
           if (!res.ok) throw new Error("ESP32 not responding");
 
-          status.textContent = "✅ Sent to enclosure!";
+          status.textContent = "Syncing with cloud...";
+
+          // 2. Push to Firebase Backup
+          const fbRes = await fetch(FIREBASE_URL, {
+              method: "PUT",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(p.settings)
+          });
+          if (!fbRes.ok) throw new Error("Firebase sync failed");
+
+          status.textContent = "✅ System updated!";
           sendBtn.textContent = "Sent Successfully";
           sendBtn.style.background = "#2cff8a";
           sendBtn.style.color = "#000";
         } catch (err) {
           console.error(err);
-          status.textContent = "❌ Failed to connect to " + ESP32_IP;
+          status.textContent = "❌ Error: " + err.message;
           sendBtn.textContent = "Retry";
           sendBtn.disabled = false;
         }
