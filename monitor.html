@@ -8,104 +8,69 @@
         :root { --bg: #0b0f0c; --card: rgba(255,255,255,0.05); --text: rgba(255,255,255,0.92); --muted: rgba(255,255,255,0.6); --stroke: rgba(255,255,255,0.12); --radius: 18px; --accent: #ffb84f; }
         body { margin: 0; background: radial-gradient(1200px 800px at 50% -20%, rgba(255, 184, 79, 0.15), transparent 60%), var(--bg); color: var(--text); font-family: system-ui, sans-serif; padding: 30px 20px; min-height: 100vh; display: flex; flex-direction: column; align-items: center; }
         .header { max-width: 600px; width: 100%; margin: 0 auto 30px auto; text-align: center; position: relative; }
-        .back-btn { position: absolute; left: 0; top: 50%; transform: translateY(-50%); color: var(--muted); text-decoration: none; font-size: 14px; transition: 0.2s; }
-        .back-btn:hover { color: white; }
+        .back-btn { position: absolute; left: 0; top: 50%; transform: translateY(-50%); color: var(--muted); text-decoration: none; font-size: 14px; }
         h2 { margin: 0; font-weight: 400; font-size: 26px; }
-
         .dashboard { width: 100%; max-width: 600px; display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-        @media (max-width: 400px) { .dashboard { grid-template-columns: 1fr; } }
-
         .data-card { background: var(--card); border: 1px solid var(--stroke); border-radius: var(--radius); padding: 20px; text-align: center; backdrop-filter: blur(10px); }
         .data-card.full { grid-column: 1 / -1; }
-        .data-icon { font-size: 24px; margin-bottom: 8px; }
-        .data-label { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px; }
+        .data-label { font-size: 12px; color: var(--muted); text-transform: uppercase; margin-bottom: 4px; }
         .data-value { font-size: 24px; font-weight: 700; color: var(--text); }
-        .data-sub { font-size: 12px; color: var(--accent); margin-top: 4px; }
-
         .actions { width: 100%; max-width: 600px; display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 30px; }
-        .btn { appearance: none; border: 1px solid rgba(255,255,255,0.16); background: rgba(255,255,255,0.08); color: white; padding: 16px; border-radius: 14px; font-weight: 600; text-decoration: none; text-align: center; transition: 0.2s; }
-        .btn:hover { background: rgba(255,255,255,0.15); }
-        
+        .btn { border: 1px solid rgba(255,255,255,0.16); background: rgba(255,255,255,0.08); color: white; padding: 16px; border-radius: 14px; font-weight: 600; text-decoration: none; text-align: center; }
         #loading { width: 100%; text-align: center; color: var(--accent); margin-top: 50px; }
     </style>
 </head>
 <body>
-
     <div class="header">
         <a href="index.html" class="back-btn">← Home</a>
         <h2>System Monitor</h2>
     </div>
-
     <div id="loading">Connecting to Cloud Database...</div>
-
     <div class="dashboard" id="dashboard" style="display: none;">
         <div class="data-card">
-            <div class="data-icon">🌡️</div>
-            <div class="data-label">Target Temp</div>
+            <div class="data-label">🌡️ Target Temp</div>
             <div class="data-value" id="dispTemp">--</div>
-            <div class="data-sub">Current Setting</div>
         </div>
         <div class="data-card">
-            <div class="data-icon">☁️</div>
-            <div class="data-label">Target Humidity</div>
+            <div class="data-label">☁️ Target Hum</div>
             <div class="data-value" id="dispHum">--</div>
-            <div class="data-sub">Current Setting</div>
         </div>
         <div class="data-card">
-            <div class="data-icon">💧</div>
-            <div class="data-label">Soil Moisture</div>
+            <div class="data-label">💧 Soil Range</div>
             <div class="data-value" id="dispSoil">--</div>
-            <div class="data-sub">Current Setting</div>
         </div>
         <div class="data-card">
-            <div class="data-icon">🌞</div>
-            <div class="data-label">Lux Threshold</div>
+            <div class="data-label">🌞 Lux Threshold</div>
             <div class="data-value" id="dispLux">--</div>
-            <div class="data-sub">Current Setting</div>
         </div>
         <div class="data-card full">
-            <div class="data-icon">⏱️</div>
-            <div class="data-label">Light Schedule</div>
+            <div class="data-label">⏱️ Light Schedule</div>
             <div class="data-value" id="dispTime">--</div>
-            <div class="data-sub">24-Hour Cycle</div>
         </div>
     </div>
-
     <div class="actions" id="actions" style="display: none;">
-        <a href="control.html" class="btn">🎛️ Manual Control</a>
-        <a href="list.html" class="btn">🌿 Browse Plants</a>
+        <a href="control.html" class="btn">Manual Control</a>
+        <a href="list.html" class="btn">Browse Plants</a>
     </div>
 
     <script>
-        // ⚠️ REPLACE THIS WITH YOUR FIREBASE URL
-        const FIREBASE_URL = ""https://plant-enclosure-default-rtdb.firebaseio.com/settings.json"; 
-
+        const FB = "https://plant-enclosure-default-rtdb.firebaseio.com/settings.json";
         async function fetchSettings() {
             try {
-                const res = await fetch(FIREBASE_URL, { cache: "no-store" });
-                if (!res.ok) throw new Error("Failed to fetch");
-                const data = await res.json();
-                
-                if (data) {
-                    document.getElementById("dispTemp").textContent = `${data.tempLow}°F - ${data.tempHigh}°F`;
-                    document.getElementById("dispHum").textContent = `${data.humLow}% - ${data.humHigh}%`;
-                    document.getElementById("dispSoil").textContent = `${data.soilLow}% - ${data.soilHigh}%`;
-                    document.getElementById("dispLux").textContent = `${data.luxThreshold} lux`;
-                    
-                    let onH = data.timeOnHour.toString().padStart(2, '0');
-                    let offH = data.timeOffHour.toString().padStart(2, '0');
-                    document.getElementById("dispTime").textContent = `${onH}:00 to ${offH}:00`;
+                const res = await fetch(FB);
+                const d = await res.json();
+                if (d) {
+                    document.getElementById("dispTemp").textContent = `${d.tempLow}° - ${d.tempHigh}°F`;
+                    document.getElementById("dispHum").textContent = `${d.humLow}% - ${d.humHigh}%`;
+                    document.getElementById("dispSoil").textContent = `${d.soilLow}% - ${d.soilHigh}%`;
+                    document.getElementById("dispLux").textContent = `${d.luxThreshold} lux`;
+                    document.getElementById("dispTime").textContent = `${d.timeOnHour}:00 to ${d.timeOffHour}:00`;
                 }
-                
                 document.getElementById("loading").style.display = "none";
                 document.getElementById("dashboard").style.display = "grid";
                 document.getElementById("actions").style.display = "grid";
-
-            } catch (err) {
-                document.getElementById("loading").innerHTML = "❌ Could not reach Cloud Database.<br>Check your Firebase URL.";
-            }
+            } catch (e) { document.getElementById("loading").textContent = "Error loading database."; }
         }
-
         fetchSettings();
     </script>
 </body>

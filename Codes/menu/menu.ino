@@ -9,25 +9,14 @@
 
 /* ==========================================
  * PIN DEFINITIONS
- * ========================================== 
-  * ========================================== 
-
- 1. TOP DISPLAY (Big Screen - SH1106 I2C) 2. BOTTOM DISPLAY (Small Screen - SSD1306 I2C)
- * -------------------------------------
- * GND  -> ESP32 GND
- * VCC  -> ESP32 3.3V
- * SDA  -> GPIO 21 (Shared)
- * SCL  -> GPIO 22 (Shared)
- * ADDR -> 0x3D (top), 0x3C (bottom)
- * -------------------------------------------*/
- 
+ * ========================================== */
 // I2C Pins
 #define I2C_SDA 21
 #define I2C_SCL 22
 
 // I2C Addresses (7-bit)
 #define BOTTOM_ADDR 0x3C
-#define TOP_ADDR 0x3D
+#define TOP_ADDR    0x3D
 
 /* ROTARY ENCODER
  * SW   -> GPIO 25
@@ -400,36 +389,26 @@ void enterSubMenu(MenuItem* item) {
  * ========================================== */
 void syncWithCloud() {
   if (WiFi.status() != WL_CONNECTED) return;
-
   updateBottomMenu("Syncing...", "Fetching Cloud");
-  
   HTTPClient http;
   http.begin(firebaseURL);
   int httpCode = http.GET();
-
-  if (httpCode > 0) {
+  if (httpCode == 200) {
     String payload = http.getString();
     StaticJsonDocument<1024> doc;
-    DeserializationError error = deserializeJson(doc, payload);
-
-    if (!error && !doc.isNull()) {
-      if (doc.containsKey("tempLow")) tempLow = doc["tempLow"];
-      if (doc.containsKey("tempHigh")) tempHigh = doc["tempHigh"];
-      if (doc.containsKey("humLow")) humLow = doc["humLow"];
-      if (doc.containsKey("humHigh")) humHigh = doc["humHigh"];
-      if (doc.containsKey("soilLow")) soilLow = doc["soilLow"];
-      if (doc.containsKey("soilHigh")) soilHigh = doc["soilHigh"];
-      if (doc.containsKey("timeOnHour")) timeOnHour = doc["timeOnHour"];
-      if (doc.containsKey("timeOffHour")) timeOffHour = doc["timeOffHour"];
-      if (doc.containsKey("luxThreshold")) luxThreshold = doc["luxThreshold"];
-      
-      updateBottomMenu("Sync Success!", "Settings Updated");
-    }
-  } else {
-    updateBottomMenu("Sync Failed", "Using Defaults");
+    deserializeJson(doc, payload);
+    if (doc.containsKey("tempLow")) tempLow = doc["tempLow"];
+    if (doc.containsKey("tempHigh")) tempHigh = doc["tempHigh"];
+    if (doc.containsKey("humLow")) humLow = doc["humLow"];
+    if (doc.containsKey("humHigh")) humHigh = doc["humHigh"];
+    if (doc.containsKey("soilLow")) soilLow = doc["soilLow"];
+    if (doc.containsKey("soilHigh")) soilHigh = doc["soilHigh"];
+    if (doc.containsKey("timeOnHour")) timeOnHour = doc["timeOnHour"];
+    if (doc.containsKey("timeOffHour")) timeOffHour = doc["timeOffHour"];
+    if (doc.containsKey("luxThreshold")) luxThreshold = doc["luxThreshold"];
+    Serial.println("Cloud Sync Done!");
   }
   http.end();
-  delay(2000);
 }
 
 /* ==========================================
@@ -445,26 +424,20 @@ void handleOptions() { addCORS(); server.send(204); }
 
 void handleSettingsPost() {
   addCORS();
-  if (!server.hasArg("plain")) { server.send(400, "application/json", "{\"ok\":false,\"error\":\"missing body\"}"); return; }
-
-  String body = server.arg("plain");
-  StaticJsonDocument<512> doc;
-  DeserializationError err = deserializeJson(doc, body);
-  
-  if (err) { server.send(400, "application/json", "{\"ok\":false,\"error\":\"bad json\"}"); return; }
-
-  if (doc.containsKey("tempLow")) tempLow = doc["tempLow"];
-  if (doc.containsKey("tempHigh")) tempHigh = doc["tempHigh"];
-  if (doc.containsKey("humLow")) humLow = doc["humLow"];
-  if (doc.containsKey("humHigh")) humHigh = doc["humHigh"];
-  if (doc.containsKey("soilLow")) soilLow = doc["soilLow"];
-  if (doc.containsKey("soilHigh")) soilHigh = doc["soilHigh"];
-  if (doc.containsKey("timeOnHour")) timeOnHour = doc["timeOnHour"];
-  if (doc.containsKey("timeOffHour")) timeOffHour = doc["timeOffHour"];
-  if (doc.containsKey("luxThreshold")) luxThreshold = doc["luxThreshold"];
-
-  if (doc.containsKey("timeOnHour") || doc.containsKey("timeOffHour")) { timerEnabled = true; }
-  server.send(200, "application/json", "{\"ok\":true}");
+  if (server.hasArg("plain")) {
+    StaticJsonDocument<512> doc;
+    deserializeJson(doc, server.arg("plain"));
+    if (doc.containsKey("tempLow")) tempLow = doc["tempLow"];
+    if (doc.containsKey("tempHigh")) tempHigh = doc["tempHigh"];
+    if (doc.containsKey("humLow")) humLow = doc["humLow"];
+    if (doc.containsKey("humHigh")) humHigh = doc["humHigh"];
+    if (doc.containsKey("soilLow")) soilLow = doc["soilLow"];
+    if (doc.containsKey("soilHigh")) soilHigh = doc["soilHigh"];
+    if (doc.containsKey("timeOnHour")) { timeOnHour = doc["timeOnHour"]; timerEnabled = true; }
+    if (doc.containsKey("timeOffHour")) { timeOffHour = doc["timeOffHour"]; timerEnabled = true; }
+    if (doc.containsKey("luxThreshold")) luxThreshold = doc["luxThreshold"];
+    server.send(200, "application/json", "{\"status\":\"ok\"}");
+  }
 }
 
 void setupServer() {
@@ -488,14 +461,10 @@ void setup() {
   topDisplay.setI2CAddress(TOP_ADDR * 2); topDisplay.begin();
   applyBrightness(globalBrightness);
 
-  // WiFi Setup
   updateBottomMenu("Connecting WiFi...", "Please wait");
   WiFiManager wm;
   wm.setConfigPortalTimeout(15);
-  bool res = wm.autoConnect("Plant_Setup", "plantadmin");
-
-  if (res) {
-    updateBottomMenu("WiFi Connected!", WiFi.localIP().toString());
+  if (wm.autoConnect("Plant_Setup")) {
     setupServer();
     syncWithCloud();
   } else {
