@@ -27,7 +27,7 @@
       .chips{ display:flex; flex-wrap:wrap; gap: 8px; }
       .chip{ padding: 6px 12px; border-radius: 99px; border: 1px solid rgba(255,255,255,0.14); background: rgba(255,255,255,0.08); font-size: 13px; }
       .actions{ display:grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 20px; }
-      .btn{ appearance: none; border: 1px solid rgba(255,255,255,0.16); background: rgba(255,255,255,0.08); color: var(--text); padding: 14px; border-radius: 12px; font-weight: 650; font-size: 14px; cursor: pointer; display:inline-flex; align-items:center; justify-content: center; gap: 8px; text-decoration: none; text-align: center; }
+      .btn{ appearance: none; border: 1px solid rgba(255,255,255,0.16); background: rgba(255,255,255,0.08); color: var(--text); padding: 14px; border-radius: 12px; font-weight: 650; font-size: 14px; cursor: pointer; display:inline-flex; align-items:center; justify-content: center; gap: 8px; text-decoration: none; text-align: center; transition: 0.2s;}
       .btn:hover{ background: rgba(255,255,255,0.15); }
       .btnSend { background: rgba(79, 153, 255, 0.2); border-color: rgba(79, 153, 255, 0.4); grid-column: span 2; }
       .btnSend:hover { background: rgba(79, 153, 255, 0.3); }
@@ -37,7 +37,7 @@
       .side h2{ margin: 0 0 10px; font-size: 18px; }
       .list{ padding-left: 20px; color: rgba(255,255,255,0.85); line-height: 1.6; font-size: 14px; }
       .back-link { position: absolute; top: 20px; left: 20px; z-index: 10; background: rgba(0,0,0,0.5); padding: 8px 12px; border-radius: 8px; color: white; text-decoration: none; font-size: 12px; backdrop-filter: blur(4px); }
-      #statusMsg { grid-column: span 2; text-align: center; font-size: 12px; margin-top: 5px; color: var(--muted); height: 16px; }
+      #statusMsg { grid-column: span 2; text-align: center; font-size: 13px; margin-top: 5px; color: var(--muted); height: 16px; }
     </style>
   </head>
   <body>
@@ -86,11 +86,13 @@
     </div>
 
     <script>
-      // --- FIREBASE URL ---
+      
       const FIREBASE_URL = "https://plant-enclosure-default-rtdb.firebaseio.com/settings.json"; 
-
-      let ESP32_IP = localStorage.getItem("esp32_ip") || "";
+      
+      let ESP32_IP = "";
+      try { ESP32_IP = localStorage.getItem("esp32_ip") || ""; } catch(e) { console.warn("Local storage disabled"); }
       if (ESP32_IP && !ESP32_IP.startsWith("http")) ESP32_IP = "http://" + ESP32_IP;
+      
       const ESP32_SETTINGS_PATH = "/settings"; 
 
       const plants = {
@@ -106,61 +108,59 @@
         rubber: { name: "Rubber Plant", subtitle: "Ficus elastica", img: "https://images.unsplash.com/photo-1669392597221-bbfd4b6e13ff?auto=format&fit=crop&w=800&q=80", display: { temp: "65-85°F", hum: "40-60%", light: "Bright/Med", water: "1-2 Wks" }, settings: { tempLow: 65.0, tempHigh: 85.0, humLow: 40.0, humHigh: 60.0, soilLow: 30, soilHigh: 50, timeOnHour: 8, timeOffHour: 20, luxThreshold: 20000 }, tips: ["Sap can irritate", "Wipe leaves", "Support when tall"], guide: ["Water when soil is dry to touch.", "Requires indirect bright light.", "Avoid cold drafts."], buyUrl: "https://www.amazon.com/s?k=rubber+plant" }
       };
 
-      const params = new URLSearchParams(window.location.search);
-      const plantId = (params.get("plant") || "pothos").toLowerCase();
-      const p = plants[plantId] || plants.pothos;
+      try {
+          const params = new URLSearchParams(window.location.search);
+          const plantId = (params.get("plant") || "pothos").toLowerCase();
+          const p = plants[plantId] || plants.pothos;
 
-      document.getElementById("plantName").textContent = p.name;
-      document.getElementById("plantSubtitle").textContent = p.subtitle;
-      document.getElementById("plantImg").src = p.img;
-      document.getElementById("light").textContent = p.display.light;
-      document.getElementById("water").textContent = p.display.water;
-      document.getElementById("temp").textContent = p.display.temp;
-      document.getElementById("humidity").textContent = p.display.hum;
-      document.getElementById("buyBtn").href = p.buyUrl;
+          document.getElementById("plantName").textContent = p.name;
+          document.getElementById("plantSubtitle").textContent = p.subtitle;
+          document.getElementById("plantImg").src = p.img;
+          document.getElementById("light").textContent = p.display.light;
+          document.getElementById("water").textContent = p.display.water;
+          document.getElementById("temp").textContent = p.display.temp;
+          document.getElementById("humidity").textContent = p.display.hum;
+          document.getElementById("buyBtn").href = p.buyUrl;
+          document.getElementById("debugSettings").textContent = `T:${p.settings.tempLow}-${p.settings.tempHigh} H:${p.settings.humLow}-${p.settings.humHigh}`;
 
-      document.getElementById("debugSettings").textContent = `T:${p.settings.tempLow}-${p.settings.tempHigh} H:${p.settings.humLow}-${p.settings.humHigh}`;
+          const tipsContainer = document.getElementById("tipsChips");
+          p.tips.forEach(t => { const d = document.createElement("div"); d.className="chip"; d.textContent="✨ " + t; tipsContainer.appendChild(d); });
 
-      const tipsContainer = document.getElementById("tipsChips");
-      p.tips.forEach(t => { const d = document.createElement("div"); d.className="chip"; d.textContent="✨ " + t; tipsContainer.appendChild(d); });
+          const guideContainer = document.getElementById("quickGuide");
+          p.guide.forEach(g => { const li = document.createElement("li"); li.textContent = g; guideContainer.appendChild(li); });
 
-      const guideContainer = document.getElementById("quickGuide");
-      p.guide.forEach(g => { const li = document.createElement("li"); li.textContent = g; guideContainer.appendChild(li); });
+          const sendBtn = document.getElementById("sendBtn");
+          const status = document.getElementById("statusMsg");
 
-      const sendBtn = document.getElementById("sendBtn");
-      const status = document.getElementById("statusMsg");
-
-      sendBtn.addEventListener("click", async () => {
-        // PROMPT FIX: If IP is missing, ask the user directly on this page!
-        if (!ESP32_IP || ESP32_IP === "http://") { 
-            let manualIp = prompt("Please enter your ESP32 IP Address (e.g. 192.168.1.100):");
-            if (manualIp) {
-                localStorage.setItem("esp32_ip", manualIp);
-                ESP32_IP = manualIp.startsWith("http") ? manualIp : "http://" + manualIp;
-            } else {
-                return; // User canceled
+          sendBtn.addEventListener("click", async () => {
+            if (!ESP32_IP || ESP32_IP === "http://") { 
+                let manualIp = prompt("Please enter your ESP32 IP Address (e.g. 192.168.1.100):");
+                if (manualIp) {
+                    try { localStorage.setItem("esp32_ip", manualIp); } catch(e) {}
+                    ESP32_IP = manualIp.startsWith("http") ? manualIp : "http://" + manualIp;
+                } else { return; }
             }
-        }
 
-        sendBtn.disabled = true; sendBtn.textContent = "Sending..."; status.textContent = "Updating hardware...";
+            sendBtn.disabled = true; sendBtn.textContent = "Sending..."; status.textContent = "Updating hardware...";
 
-        try {
-          const res = await fetch(`${ESP32_IP}${ESP32_SETTINGS_PATH}`, {
-            method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(p.settings)
+            try {
+              const res = await fetch(`${ESP32_IP}${ESP32_SETTINGS_PATH}`, {
+                method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(p.settings)
+              });
+              if (!res.ok) throw new Error("ESP32 not responding");
+
+              status.textContent = "Syncing with cloud...";
+              const fbRes = await fetch(FIREBASE_URL, {
+                  method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(p.settings)
+              });
+              if (!fbRes.ok) throw new Error("Firebase sync failed");
+
+              status.textContent = "✅ System updated!"; sendBtn.textContent = "Sent Successfully"; sendBtn.style.background = "#2cff8a"; sendBtn.style.color = "#000";
+            } catch (err) {
+              console.error(err); status.textContent = "❌ Error: " + err.message; sendBtn.textContent = "Retry"; sendBtn.disabled = false;
+            }
           });
-          if (!res.ok) throw new Error("ESP32 not responding");
-
-          status.textContent = "Syncing with cloud...";
-          const fbRes = await fetch(FIREBASE_URL, {
-              method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(p.settings)
-          });
-          if (!fbRes.ok) throw new Error("Firebase sync failed");
-
-          status.textContent = "✅ System updated!"; sendBtn.textContent = "Sent Successfully"; sendBtn.style.background = "#2cff8a"; sendBtn.style.color = "#000";
-        } catch (err) {
-          console.error(err); status.textContent = "❌ Error: " + err.message; sendBtn.textContent = "Retry"; sendBtn.disabled = false;
-        }
-      });
+      } catch(fatalError) { console.error("Fatal Page Error:", fatalError); }
     </script>
   </body>
 </html>
