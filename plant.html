@@ -138,12 +138,6 @@
 <script type="module">
       import { db, ref, update } from './firebase-config.js';
       
-      let ESP32_IP = "";
-      try { ESP32_IP = localStorage.getItem("esp32_ip") || ""; } catch(e) { console.warn("Local storage disabled"); }
-      if (ESP32_IP && !ESP32_IP.startsWith("http")) ESP32_IP = "http://" + ESP32_IP;
-      
-      const ESP32_SETTINGS_PATH = "/settings"; 
-
       const plants = {
         pothos: { name: "Pothos", subtitle: "Epipremnum aureum", img: "https://plus.unsplash.com/premium_photo-1663962975773-44cfbefe880b?auto=format&fit=crop&w=800&q=80", display: { temp: "65-85°F", hum: "40-60%", light: "Low/Med", water: "Weekly" }, settings: { tempLow: 65.0, tempHigh: 85.0, humLow: 40.0, humHigh: 60.0, soilLow: 20, soilHigh: 50, timeOnHour: 9, timeOffHour: 19, luxThreshold: 5000 }, tips: ["Rotate weekly", "Wipe leaves", "Avoid harsh sun"], guide: ["Water when top 2cm is dry.", "Thrives in indirect light.", "Fertilize in Spring."], buyUrl: "https://www.amazon.com/s?k=pothos+plant", nutriUrl: "https://www.amazon.com/s?k=liquid+indoor+plant+food" },
         snake: { name: "Snake Plant", subtitle: "Sansevieria", img: "https://images.unsplash.com/photo-1588709983192-3852c7713145?auto=format&fit=crop&w=800&q=80", display: { temp: "60-90°F", hum: "30-50%", light: "Any", water: "2-3 Wks" }, settings: { tempLow: 60.0, tempHigh: 90.0, humLow: 30.0, humHigh: 50.0, soilLow: 10, soilHigh: 40, timeOnHour: 8, timeOffHour: 20, luxThreshold: 3000 }, tips: ["Don't overwater", "Wipe dust", "Hardy"], guide: ["Let soil dry completely.", "Tolerates low light.", "Use cactus soil."], buyUrl: "https://www.amazon.com/s?k=snake+plant", nutriUrl: "https://www.amazon.com/s?k=succulent+plant+food"},
@@ -170,12 +164,15 @@
           document.getElementById("water").textContent = p.display.water;
           document.getElementById("temp").textContent = p.display.temp;
           document.getElementById("humidity").textContent = p.display.hum;
+          
           document.getElementById("buyBtn").href = p.buyUrl;
           document.getElementById("nutriBtn").href = p.nutriUrl;
+
           document.getElementById("debugSettings").textContent = `T:${p.settings.tempLow}-${p.settings.tempHigh} H:${p.settings.humLow}-${p.settings.humHigh}`;
 
           const tipsContainer = document.getElementById("tipsChips");
           p.tips.forEach(t => { const d = document.createElement("div"); d.className="chip"; d.textContent="✨ " + t; tipsContainer.appendChild(d); });
+
           const guideContainer = document.getElementById("quickGuide");
           p.guide.forEach(g => { const li = document.createElement("li"); li.textContent = g; guideContainer.appendChild(li); });
 
@@ -195,33 +192,18 @@
              setTimeout(() => { window.location.href = `plant.html?plant=${plantKeys[prevIndex]}`; }, 400);
           });
 
-          // Send to Enclosure
+          // PUSH DIRECTLY TO CLOUD
           const sendBtn = document.getElementById("sendBtn");
           const status = document.getElementById("statusMsg");
 
           sendBtn.addEventListener("click", async () => {
-            if (!ESP32_IP || ESP32_IP === "http://") { 
-                let manualIp = prompt("Please enter your ESP32 IP Address (e.g. 192.168.1.100):");
-                if (manualIp) {
-                    try { localStorage.setItem("esp32_ip", manualIp); } catch(e) {}
-                    ESP32_IP = manualIp.startsWith("http") ? manualIp : "http://" + manualIp;
-                } else { return; }
-            }
-
-            sendBtn.disabled = true; sendBtn.textContent = "Sending..."; status.textContent = "Updating hardware...";
+            sendBtn.disabled = true; sendBtn.textContent = "Syncing to Cloud...";
 
             try {
-              // 1. Local Hardware Push
-              try {
-                await fetch(`${ESP32_IP}${ESP32_SETTINGS_PATH}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(p.settings) });
-              } catch(e) { console.warn("Local IP not reachable, moving to cloud..."); }
-
-              // 2. Firebase Push
-              status.textContent = "Syncing with cloud...";
               const settingsRef = ref(db, 'settings');
               await update(settingsRef, p.settings);
-
-              status.textContent = "✅ System updated!"; sendBtn.textContent = "Sent Successfully"; sendBtn.style.background = "#2cff8a"; sendBtn.style.color = "#000";
+              status.textContent = "✅ Cloud Updated! Hardware is syncing..."; 
+              sendBtn.textContent = "Sent Successfully"; sendBtn.style.background = "#2cff8a"; sendBtn.style.color = "#000";
             } catch (err) {
               console.error(err); status.textContent = "❌ Error: " + err.message; sendBtn.textContent = "Retry"; sendBtn.disabled = false;
             }

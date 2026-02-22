@@ -50,6 +50,7 @@ int lastStepDisp = -1;
 bool externalUpdateReceived = false;
 unsigned long bottomMsgTimeout = 0;
 bool showingTempMsg = false;
+unsigned long lastEncoderMoveTime = 0; // NEW: Tracks when dial was last touched
 
 // --- FIREBASE URL ---
 const char* firebaseURL = "https://plant-enclosure-default-rtdb.firebaseio.com/settings.json";
@@ -83,7 +84,7 @@ void startEditLux(); void resetGlobal(); void showPH(); void startSensorTest();
 void startSetClock(); void startEditBrightness(); void goBack();
 void startWiFiSetup(); void showWiFiIP(); void resetWiFi();
 void setupServer(); void handleSettingsPost(); void handleOptions();
-void pushToCloud(); 
+void pushToCloud(); void syncWithCloudSilent();
 
 MenuItem tempItems[] = { { "Set Range", startEditTemp, nullptr, 0 }, { "Back", nullptr, nullptr, 0 } };
 MenuItem humItems[] = { { "Set Range", startEditHum, nullptr, 0 }, { "Back", nullptr, nullptr, 0 } };
@@ -240,22 +241,44 @@ void enterSubMenu(MenuItem* item) {
 void syncWithCloud() {
   if (WiFi.status() != WL_CONNECTED) return;
   updateBottomMenu("Syncing...", "Fetching Cloud");
-  HTTPClient http; http.begin(firebaseURL); int httpCode = http.GET();
+  syncWithCloudSilent(); // Call the silent worker function
+}
+
+// Background Cloud Poller
+void syncWithCloudSilent() {
+  if (WiFi.status() != WL_CONNECTED) return;
+  
+  HTTPClient http; 
+  http.begin(firebaseURL); 
+  int httpCode = http.GET();
+  
   if (httpCode == 200) {
-    String payload = http.getString(); StaticJsonDocument<1024> doc; deserializeJson(doc, payload);
-    if (doc.containsKey("tempLow")) tempLow = doc["tempLow"]; if (doc.containsKey("tempHigh")) tempHigh = doc["tempHigh"];
-    if (doc.containsKey("humLow")) humLow = doc["humLow"]; if (doc.containsKey("humHigh")) humHigh = doc["humHigh"];
-    if (doc.containsKey("soilLow")) soilLow = doc["soilLow"]; if (doc.containsKey("soilHigh")) soilHigh = doc["soilHigh"];
-    if (doc.containsKey("timeOnHour")) timeOnHour = doc["timeOnHour"]; if (doc.containsKey("timeOffHour")) timeOffHour = doc["timeOffHour"];
-    if (doc.containsKey("luxThreshold")) luxThreshold = doc["luxThreshold"];
-    if (doc.containsKey("timerEnabled")) timerEnabled = doc["timerEnabled"];
-    if (doc.containsKey("globalBrightness")) { globalBrightness = doc["globalBrightness"]; applyBrightness(globalBrightness); }
+    String payload = http.getString(); 
+    StaticJsonDocument<1024> doc; 
+    deserializeJson(doc, payload);
     
-    // Show success momentarily
-    updateBottomMenu("Cloud Sync", "Successful!");
-    bottomMsgTimeout = millis() + 2000;
-    showingTempMsg = true;
-    externalUpdateReceived = true;
+    bool changed = false;
+
+    if (doc.containsKey("tempLow") && tempLow != doc["tempLow"].as<float>()) { tempLow = doc["tempLow"]; changed = true; }
+    if (doc.containsKey("tempHigh") && tempHigh != doc["tempHigh"].as<float>()) { tempHigh = doc["tempHigh"]; changed = true; }
+    if (doc.containsKey("humLow") && humLow != doc["humLow"].as<float>()) { humLow = doc["humLow"]; changed = true; }
+    if (doc.containsKey("humHigh") && humHigh != doc["humHigh"].as<float>()) { humHigh = doc["humHigh"]; changed = true; }
+    if (doc.containsKey("soilLow") && soilLow != doc["soilLow"].as<int>()) { soilLow = doc["soilLow"]; changed = true; }
+    if (doc.containsKey("soilHigh") && soilHigh != doc["soilHigh"].as<int>()) { soilHigh = doc["soilHigh"]; changed = true; }
+    if (doc.containsKey("timeOnHour") && timeOnHour != doc["timeOnHour"].as<int>()) { timeOnHour = doc["timeOnHour"]; changed = true; }
+    if (doc.containsKey("timeOffHour") && timeOffHour != doc["timeOffHour"].as<int>()) { timeOffHour = doc["timeOffHour"]; changed = true; }
+    if (doc.containsKey("luxThreshold") && luxThreshold != doc["luxThreshold"].as<long>()) { luxThreshold = doc["luxThreshold"]; changed = true; }
+    if (doc.containsKey("timerEnabled") && timerEnabled != doc["timerEnabled"].as<bool>()) { timerEnabled = doc["timerEnabled"]; changed = true; }
+    if (doc.containsKey("globalBrightness") && globalBrightness != doc["globalBrightness"].as<int>()) { 
+        globalBrightness = doc["globalBrightness"]; applyBrightness(globalBrightness); changed = true; 
+    }
+
+    if (changed) {
+        updateBottomMenu("Web Update", "Received!");
+        bottomMsgTimeout = millis() + 2000;
+        showingTempMsg = true;
+        externalUpdateReceived = true;
+    }
   }
   http.end();
 }
@@ -290,36 +313,8 @@ void pushToCloud() {
 
 void addCORS() { server.sendHeader("Access-Control-Allow-Origin", "*"); server.sendHeader("Access-Control-Allow-Methods", "POST, GET, OPTIONS"); server.sendHeader("Access-Control-Allow-Headers", "Content-Type"); }
 void handleOptions() { addCORS(); server.send(204); }
-
-void handleSettingsPost() {
-  addCORS();
-  if (server.hasArg("plain")) {
-    StaticJsonDocument<512> doc; deserializeJson(doc, server.arg("plain"));
-    if (doc.containsKey("tempLow")) tempLow = doc["tempLow"]; if (doc.containsKey("tempHigh")) tempHigh = doc["tempHigh"];
-    if (doc.containsKey("humLow")) humLow = doc["humLow"]; if (doc.containsKey("humHigh")) humHigh = doc["humHigh"];
-    if (doc.containsKey("soilLow")) soilLow = doc["soilLow"]; if (doc.containsKey("soilHigh")) soilHigh = doc["soilHigh"];
-    if (doc.containsKey("timeOnHour")) timeOnHour = doc["timeOnHour"];
-    if (doc.containsKey("timeOffHour")) timeOffHour = doc["timeOffHour"];
-    if (doc.containsKey("luxThreshold")) luxThreshold = doc["luxThreshold"];
-    if (doc.containsKey("timerEnabled")) timerEnabled = doc["timerEnabled"];
-    if (doc.containsKey("globalBrightness")) { globalBrightness = doc["globalBrightness"]; applyBrightness(globalBrightness); }
-    
-    // --- TRIGGER THE VISUAL CONFIRMATION ---
-    updateBottomMenu("Web Update", "Received!");
-    bottomMsgTimeout = millis() + 2000;  // Show message for 2 seconds
-    showingTempMsg = true;               // Lock the bottom screen from being overwritten
-    externalUpdateReceived = true;       // Tell loop() to force redraw the top UI
-    
-    server.send(200, "application/json", "{\"status\":\"ok\"}");
-  }
-}
-
-void setupServer() {
-  server.on("/settings", HTTP_OPTIONS, handleOptions);
-  server.on("/settings", HTTP_POST, handleSettingsPost);
-  server.on("/", HTTP_GET, []() { addCORS(); server.send(200, "text/plain", "ESP32 is online"); });
-  server.begin();
-}
+void handleSettingsPost() { /* Kept as local fallback, but no longer required */ server.send(200, "application/json", "{\"status\":\"ok\"}"); }
+void setupServer() { server.on("/settings", HTTP_OPTIONS, handleOptions); server.on("/settings", HTTP_POST, handleSettingsPost); server.on("/", HTTP_GET, []() { addCORS(); server.send(200, "text/plain", "ESP32 is online"); }); server.begin(); }
 
 void setup() {
   Serial.begin(115200);
@@ -328,8 +323,9 @@ void setup() {
   attachInterrupt(digitalPinToInterrupt(ENC_DT), readEncoder, CHANGE);
 
   Wire.begin(I2C_SDA, I2C_SCL);
-  topDisplay.setI2CAddress(TOP_ADDR * 2); topDisplay.begin();
+  topDisplay.setBusClock(100000); bottomDisplay.setBusClock(100000);  
   bottomDisplay.setI2CAddress(BOTTOM_ADDR * 2); bottomDisplay.begin();
+  topDisplay.setI2CAddress(TOP_ADDR * 2); topDisplay.begin();
   applyBrightness(globalBrightness);
 
   updateBottomMenu("Connecting WiFi...", "Please wait");
@@ -358,9 +354,21 @@ void loop() {
     uiNeedsDraw = true;
   }
 
+  // --- BACKGROUND CLOUD POLLING ---
+  // Checks cloud every 3 seconds ONLY if you aren't currently spinning the dial
+  static unsigned long lastCloudCheck = 0;
+  if (millis() - lastCloudCheck > 3000) {
+    lastCloudCheck = millis();
+    if (millis() - lastEncoderMoveTime > 2000) {
+       syncWithCloudSilent();
+    }
+  }
+
   int currentEnc = encoderCount / 4; int diff = lastEncoderCount - currentEnc;
   if (diff != 0) {
     lastEncoderCount = currentEnc; uiNeedsDraw = true;
+    lastEncoderMoveTime = millis(); // Pause background polling
+
     if (uiState == STATE_MENU || uiState == STATE_SUBMENU) {
       selectedIndex += diff;
       if (selectedIndex < 0) selectedIndex = currentMenuSize - 1;
@@ -399,6 +407,8 @@ void loop() {
 
   if (clicked) {
     uiNeedsDraw = true;
+    lastEncoderMoveTime = millis(); // Pause background polling
+
     if (uiState == STATE_MENU || uiState == STATE_SUBMENU) {
       MenuItem& item = currentMenu[selectedIndex];
       if (String(item.name) == "Back") goBack(); else if (item.children != nullptr) enterSubMenu(&item); else if (item.action != nullptr) item.action();

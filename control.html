@@ -25,9 +25,6 @@
 
         .group-title { font-size: 13px; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 24px; font-weight: 700; color: #fff; opacity: 0.8;}
         
-        /* Custom Inputs */
-        .ip-input { width: 100%; background: rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.1); color: white; padding: 14px; border-radius: 12px; font-size: 16px; outline: none; font-family: monospace; box-sizing: border-box;}
-        
         /* Sliders */
         .slider-container { margin-bottom: 28px; }
         .slider-labels { display: flex; justify-content: space-between; font-size: 14px; margin-bottom: 12px; color: var(--muted); }
@@ -73,9 +70,7 @@
     <div class="form-container" id="formWrapper">
         
         <div class="card card-sys">
-            <div class="group-title">🔌 Connection & System</div>
-            <input type="text" class="ip-input" id="espIp" placeholder="ESP32 IP (e.g. 192.168.1.50)">
-            <br><br>
+            <div class="group-title">🔌 System Settings</div>
             <div class="slider-container" style="margin-bottom:0;">
                 <div class="slider-labels"><span>Screen Brightness</span> <span class="val" id="brightVal">10 / 10</span></div>
                 <div class="dual-slider"><div class="slider-track" id="brightTrack" style="width:100%"></div>
@@ -146,22 +141,19 @@
 
     </div>
 
-    <button class="btn-push" id="sendBtn">Sync Enclosure Data 📡</button>
+    <button class="btn-push" id="sendBtn">Push to Enclosure Cloud ☁️</button>
     <div id="statusMsg">Ready.</div>
 
-<script type="module">
+    <script type="module">
         import { db, ref, get, update } from './firebase-config.js';
 
         const inputs = {
-            espIp: document.getElementById("espIp"), tempLow: document.getElementById("tempLow"), tempHigh: document.getElementById("tempHigh"),
+            tempLow: document.getElementById("tempLow"), tempHigh: document.getElementById("tempHigh"),
             humLow: document.getElementById("humLow"), humHigh: document.getElementById("humHigh"), soilLow: document.getElementById("soilLow"),
             soilHigh: document.getElementById("soilHigh"), timeOnHour: document.getElementById("timeOnHour"), timeOffHour: document.getElementById("timeOffHour"), 
             luxThreshold: document.getElementById("luxThreshold"), timerEnabled: document.getElementById("timerEnabled"), globalBrightness: document.getElementById("globalBrightness")
         };
 
-        try { const savedIp = localStorage.getItem("esp32_ip"); if (savedIp) inputs.espIp.value = savedIp; } catch(e) {}
-
-        // Make functions global so inline HTML "oninput" can still see them
         window.updateSliders = function(type) {
             const low = document.getElementById(type + "Low"); const high = document.getElementById(type + "High");
             const track = document.getElementById(type + "Track"); const label = document.getElementById(type + "Val");
@@ -182,7 +174,6 @@
             document.getElementById("brightVal").textContent = document.getElementById("globalBrightness").value + " / 10";
         }
 
-        // Fetch current values once on load
         const settingsRef = ref(db, 'settings');
         get(settingsRef).then((snapshot) => {
             const d = snapshot.val();
@@ -197,17 +188,11 @@
             window.updateSliders('temp'); window.updateSliders('hum'); window.updateSliders('soil'); window.updateSingles();
         }).catch(err => console.error(err));
 
-        // Push button logic
         document.getElementById("sendBtn").addEventListener("click", async () => {
-            let targetIp = inputs.espIp.value.trim();
-            if (!targetIp) { alert("Please enter the ESP32 IP Address!"); inputs.espIp.focus(); return; }
-            if (!targetIp.startsWith("http")) targetIp = "http://" + targetIp;
-
             const sendBtn = document.getElementById("sendBtn");
             const statusMsg = document.getElementById("statusMsg");
 
-            sendBtn.disabled = true; sendBtn.textContent = "Syncing...";
-            try { localStorage.setItem("esp32_ip", inputs.espIp.value.trim()); } catch(e) {}
+            sendBtn.disabled = true; sendBtn.textContent = "Syncing with Cloud...";
 
             const newSettings = {
                 tempLow: parseFloat(inputs.tempLow.value), tempHigh: parseFloat(inputs.tempHigh.value),
@@ -219,21 +204,12 @@
             };
 
             try {
-                // 1. Push to Local Hardware First
-                statusMsg.textContent = "Pushing to Hardware...";
-                try {
-                    await fetch(`${targetIp}/settings`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(newSettings) });
-                } catch (e) {
-                    console.warn("Hardware update skipped/failed - moving to cloud sync.");
-                }
-
-                // 2. Push to Firebase via SDK
-                statusMsg.textContent = "Updating Cloud Database...";
+                // Instantly pushes to the Firebase SDK. Hardware pulls it automatically!
                 await update(settingsRef, newSettings);
 
-                statusMsg.textContent = "✅ System Fully Synchronized!";
+                statusMsg.textContent = "✅ Cloud Database Updated! Hardware syncing...";
                 sendBtn.textContent = "Sync Complete"; sendBtn.style.background = "#4fc3f7"; 
-                setTimeout(() => { sendBtn.disabled = false; sendBtn.textContent = "Sync Enclosure Data 📡"; sendBtn.style.background = ""; }, 3000);
+                setTimeout(() => { sendBtn.disabled = false; sendBtn.textContent = "Push to Enclosure Cloud ☁️"; sendBtn.style.background = ""; }, 3000);
             } catch (err) {
                 statusMsg.textContent = `❌ Error: ${err.message}`; sendBtn.disabled = false; sendBtn.textContent = "Try Again";
             }
