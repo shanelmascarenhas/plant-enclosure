@@ -15,7 +15,6 @@
 
         .form-container { width: 100%; max-width: 600px; display: flex; flex-direction: column; gap: 20px; }
         
-        /* Modern Glass Cards with glowing borders */
         .card { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: var(--radius); padding: 24px; backdrop-filter: blur(20px); position: relative; overflow: hidden; }
         .card::before { content: ""; position: absolute; top: 0; left: 0; width: 4px; height: 100%; }
         .card.card-temp::before { background: var(--c-temp); box-shadow: 0 0 15px var(--c-temp); }
@@ -37,7 +36,6 @@
         .dual-slider input[type="range"]::-webkit-slider-thumb { pointer-events: auto; -webkit-appearance: none; width: 20px; height: 20px; background: #111; border: 2px solid white; border-radius: 50%; cursor: pointer; transition: transform 0.1s; }
         .dual-slider input[type="range"]::-webkit-slider-thumb:active { transform: scale(1.2); }
 
-        /* Themed Tracks */
         .card-temp .slider-track { background: var(--c-temp); }
         .card-temp .dual-slider input[type="range"]::-webkit-slider-thumb { border-color: var(--c-temp); }
         .card-water .slider-track { background: var(--c-water); }
@@ -47,7 +45,6 @@
         .card-sys .slider-track { background: var(--c-sys); }
         .card-sys .dual-slider input[type="range"]::-webkit-slider-thumb { border-color: var(--c-sys); }
 
-        /* iOS Style Toggle Switch */
         .toggle-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; padding-bottom: 20px; border-bottom: 1px solid rgba(255,255,255,0.05); }
         .switch { position: relative; display: inline-block; width: 50px; height: 28px; }
         .switch input { opacity: 0; width: 0; height: 0; }
@@ -59,6 +56,10 @@
         .btn-push { position: sticky; bottom: 20px; width: 100%; max-width: 600px; background: rgba(255,255,255,0.95); color: #000; border: none; padding: 18px; border-radius: 16px; font-weight: 700; font-size: 16px; cursor: pointer; box-shadow: 0 10px 30px rgba(0,0,0,0.5); z-index: 10; transition: 0.2s;}
         .btn-push:active { transform: scale(0.98); }
         #statusMsg { text-align: center; font-size: 13px; margin-top: 15px; color: var(--muted); }
+
+        /* Advanced Settings Fold */
+        .advanced-toggle { color: var(--muted); font-size: 10pt; text-transform: uppercase; letter-spacing: 1px; cursor: pointer; margin-top: 20px; margin-bottom: 20px; transition: 0.2s; text-align: center; width: 100%; max-width: 600px;}
+        .advanced-toggle:hover { color: white; }
 
         /* Terminal CSS */
         textarea#serialLog { width: 100%; height: 180px; background: #050505; color: var(--c-term); border: 1px solid rgba(0,255,65,0.3); border-radius: 12px; padding: 12px; font-family: monospace; font-size: 12px; resize: none; margin-bottom: 16px; box-sizing: border-box; }
@@ -78,17 +79,6 @@
     </div>
 
     <div class="form-container" id="formWrapper">
-        
-        <div class="card card-sys">
-            <div class="group-title">🔌 System Settings</div>
-            <div class="slider-container" style="margin-bottom:0;">
-                <div class="slider-labels"><span>Screen Brightness</span> <span class="val" id="brightVal">10 / 10</span></div>
-                <div class="dual-slider"><div class="slider-track" id="brightTrack" style="width:100%"></div>
-                    <input type="range" id="globalBrightness" min="1" max="10" value="10" oninput="updateSingles()">
-                </div>
-            </div>
-        </div>
-
         <div class="card card-temp">
             <div class="group-title">🌡️ Climate Range</div>
             <div class="slider-container">
@@ -128,13 +118,13 @@
                 <label class="switch"><input type="checkbox" id="timerEnabled"><span class="slider-tog"></span></label>
             </div>
             <div class="slider-container">
-                <div class="slider-labels"><span>Turn On Time</span> <span class="val" id="onVal">08:00</span></div>
+                <div class="slider-labels"><span>Turn On Time</span> <span class="val" id="onVal">08:00 AM</span></div>
                 <div class="dual-slider"><div class="slider-track" style="width:100%"></div>
                     <input type="range" id="timeOnHour" min="0" max="23" value="8" oninput="updateSingles()">
                 </div>
             </div>
             <div class="slider-container">
-                <div class="slider-labels"><span>Turn Off Time</span> <span class="val" id="offVal">20:00</span></div>
+                <div class="slider-labels"><span>Turn Off Time</span> <span class="val" id="offVal">08:00 PM</span></div>
                 <div class="dual-slider"><div class="slider-track" style="width:100%"></div>
                     <input type="range" id="timeOffHour" min="0" max="23" value="20" oninput="updateSingles()">
                 </div>
@@ -146,6 +136,35 @@
                 </div>
             </div>
         </div>
+    </div>
+
+    <div class="advanced-toggle" id="advLabel" onclick="toggleAdvanced()">▼ Advanced Settings</div>
+
+    <div class="form-container" id="advancedSettings" style="display: none; margin-bottom: 20px;">
+        
+        <div class="card card-sys">
+            <div class="group-title">⚙️ System Configuration</div>
+            <div class="slider-container">
+                <div class="slider-labels"><span>Screen Brightness</span> <span class="val" id="brightVal">10 / 10</span></div>
+                <div class="dual-slider"><div class="slider-track" id="brightTrack" style="width:100%"></div>
+                    <input type="range" id="globalBrightness" min="1" max="10" value="10" oninput="updateSingles()">
+                </div>
+            </div>
+            <div class="slider-container" style="margin-bottom:0;">
+                <div class="slider-labels"><span>Time Zone (NTP Sync)</span> <span class="val" id="tzVal">UTC -5</span></div>
+                <div class="dual-slider"><div class="slider-track" style="width:100%"></div>
+                    <input type="range" id="timeZoneOffset" min="-12" max="14" value="-5" oninput="updateSingles()">
+                </div>
+            </div>
+        </div>
+
+        <div class="card card-sys">
+            <div class="group-title">🛠️ System Actions</div>
+            <div class="btn-row">
+                <button class="btn-term btn-danger" id="globalResetBtn">Factory Reset</button>
+                <button class="btn-term" id="sensorTestBtn" style="color: var(--c-water); border-color: rgba(79, 195, 247, 0.4);">Run Sensor Test</button>
+            </div>
+        </div>
 
         <div class="card card-term">
             <div class="group-title">☁️ Cloud Serial Monitor</div>
@@ -155,7 +174,6 @@
                 <button class="btn-term btn-danger" id="resetBtn">⚠️ Remote Reboot</button>
             </div>
         </div>
-
     </div>
 
     <button class="btn-push" id="sendBtn">Push to Enclosure Cloud ☁️</button>
@@ -168,8 +186,25 @@
             tempLow: document.getElementById("tempLow"), tempHigh: document.getElementById("tempHigh"),
             humLow: document.getElementById("humLow"), humHigh: document.getElementById("humHigh"), soilLow: document.getElementById("soilLow"),
             soilHigh: document.getElementById("soilHigh"), timeOnHour: document.getElementById("timeOnHour"), timeOffHour: document.getElementById("timeOffHour"), 
-            luxThreshold: document.getElementById("luxThreshold"), timerEnabled: document.getElementById("timerEnabled"), globalBrightness: document.getElementById("globalBrightness")
+            luxThreshold: document.getElementById("luxThreshold"), timerEnabled: document.getElementById("timerEnabled"), 
+            globalBrightness: document.getElementById("globalBrightness"), timeZoneOffset: document.getElementById("timeZoneOffset")
         };
+
+        window.toggleAdvanced = function() {
+            const adv = document.getElementById("advancedSettings");
+            const label = document.getElementById("advLabel");
+            if (adv.style.display === "none") {
+                adv.style.display = "flex"; label.textContent = "▲ Close Advanced Settings";
+            } else {
+                adv.style.display = "none"; label.textContent = "▼ Advanced Settings";
+            }
+        }
+
+        window.formatAMPM = function(hour) {
+            let h = hour % 12 || 12;
+            let ampm = hour < 12 ? 'AM' : 'PM';
+            return `${h}:00 ${ampm}`;
+        }
 
         window.updateSliders = function(type) {
             const low = document.getElementById(type + "Low"); const high = document.getElementById(type + "High");
@@ -185,15 +220,19 @@
         }
 
         window.updateSingles = function() {
-            document.getElementById("onVal").textContent = document.getElementById("timeOnHour").value.padStart(2, '0') + ":00";
-            document.getElementById("offVal").textContent = document.getElementById("timeOffHour").value.padStart(2, '0') + ":00";
+            let onH = parseInt(document.getElementById("timeOnHour").value);
+            let offH = parseInt(document.getElementById("timeOffHour").value);
+            document.getElementById("onVal").textContent = formatAMPM(onH);
+            document.getElementById("offVal").textContent = formatAMPM(offH);
             document.getElementById("luxVal").textContent = document.getElementById("luxThreshold").value + " lux";
             document.getElementById("brightVal").textContent = document.getElementById("globalBrightness").value + " / 10";
+            
+            let tz = parseInt(document.getElementById("timeZoneOffset").value);
+            document.getElementById("tzVal").textContent = "UTC " + (tz >= 0 ? "+" : "") + tz;
         }
 
         const settingsRef = ref(db, 'settings');
 
-        // Fetch settings initially
         get(settingsRef).then((snapshot) => {
             const d = snapshot.val();
             if (d && d.tempLow !== undefined) {
@@ -207,30 +246,24 @@
             window.updateSliders('temp'); window.updateSliders('hum'); window.updateSliders('soil'); window.updateSingles();
         }).catch(err => console.error(err));
 
-        // Listen for new logs automatically!
         onValue(settingsRef, (snapshot) => {
             const d = snapshot.val();
             if(d && d.system_logs) {
                 const logBox = document.getElementById("serialLog");
-                logBox.value = d.system_logs;
-                logBox.scrollTop = logBox.scrollHeight;
+                logBox.value = d.system_logs; logBox.scrollTop = logBox.scrollHeight;
             }
         });
 
-        // PUSH CLIMATE SETTINGS
         document.getElementById("sendBtn").addEventListener("click", async () => {
-            const sendBtn = document.getElementById("sendBtn");
-            const statusMsg = document.getElementById("statusMsg");
-
+            const sendBtn = document.getElementById("sendBtn"); const statusMsg = document.getElementById("statusMsg");
             sendBtn.disabled = true; sendBtn.textContent = "Syncing with Cloud...";
-
             const newSettings = {
                 tempLow: parseFloat(inputs.tempLow.value), tempHigh: parseFloat(inputs.tempHigh.value),
                 humLow: parseFloat(inputs.humLow.value), humHigh: parseFloat(inputs.humHigh.value),
                 soilLow: parseInt(inputs.soilLow.value), soilHigh: parseInt(inputs.soilHigh.value),
                 timeOnHour: parseInt(inputs.timeOnHour.value), timeOffHour: parseInt(inputs.timeOffHour.value),
                 luxThreshold: parseInt(inputs.luxThreshold.value), timerEnabled: inputs.timerEnabled.checked,
-                globalBrightness: parseInt(inputs.globalBrightness.value)
+                globalBrightness: parseInt(inputs.globalBrightness.value), timeZoneOffset: parseInt(inputs.timeZoneOffset.value)
             };
 
             try {
@@ -238,31 +271,33 @@
                 statusMsg.textContent = "✅ Cloud Database Updated! Hardware syncing...";
                 sendBtn.textContent = "Sync Complete"; sendBtn.style.background = "#4fc3f7"; 
                 setTimeout(() => { sendBtn.disabled = false; sendBtn.textContent = "Push to Enclosure Cloud ☁️"; sendBtn.style.background = ""; }, 3000);
-            } catch (err) {
-                statusMsg.textContent = `❌ Error: ${err.message}`; sendBtn.disabled = false; sendBtn.textContent = "Try Again";
-            }
+            } catch (err) { statusMsg.textContent = `❌ Error: ${err.message}`; sendBtn.disabled = false; sendBtn.textContent = "Try Again"; }
         });
 
-        // ==========================================
-        // TRUE CLOUD TERMINAL COMMANDS
-        // ==========================================
+        // COMMAND BUTTONS
         const logBox = document.getElementById("serialLog");
 
+        document.getElementById("globalResetBtn").addEventListener("click", async () => {
+            if(!confirm("⚠️ This will wipe the enclosure's local settings back to default. Proceed?")) return;
+            logBox.value += "\n\n[CLOUD] Sending Global Reset Command..."; logBox.scrollTop = logBox.scrollHeight;
+            await update(settingsRef, { global_reset_cmd: true });
+        });
+
+        document.getElementById("sensorTestBtn").addEventListener("click", async () => {
+            logBox.value += "\n\n[CLOUD] Activating Sensor Test Mode on Display..."; logBox.scrollTop = logBox.scrollHeight;
+            await update(settingsRef, { sensor_test_cmd: true });
+        });
+
         document.getElementById("fetchLogBtn").addEventListener("click", async () => {
-            logBox.value += "\n\n[CLOUD] Requesting log dump from ESP32...";
-            logBox.scrollTop = logBox.scrollHeight;
-            // Send the command flag to Firebase
+            logBox.value += "\n\n[CLOUD] Requesting log dump from ESP32..."; logBox.scrollTop = logBox.scrollHeight;
             await update(settingsRef, { fetch_logs_cmd: true });
         });
 
         document.getElementById("resetBtn").addEventListener("click", async () => {
             if(!confirm("⚠️ Are you sure you want to reboot the enclosure from the cloud?")) return;
-            logBox.value += "\n\n[CLOUD] Sending Remote Reboot Command...";
-            logBox.scrollTop = logBox.scrollHeight;
-            // Send the command flag to Firebase
+            logBox.value += "\n\n[CLOUD] Sending Remote Reboot Command..."; logBox.scrollTop = logBox.scrollHeight;
             await update(settingsRef, { reboot_cmd: true });
         });
-
     </script>
 </body>
 </html>

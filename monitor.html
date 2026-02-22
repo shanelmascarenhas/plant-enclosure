@@ -12,7 +12,6 @@
         .back-btn:hover { color: white; }
         h2 { margin: 0; font-weight: 400; font-size: 26px; }
         
-        /* Sync Indicator */
         .live-status { display: flex; align-items: center; justify-content: center; gap: 6px; font-size: 12px; color: var(--accent); margin-top: 8px; font-weight: bold;}
         .dot { width: 8px; height: 8px; background: var(--accent); border-radius: 50%; animation: pulse 1.5s infinite; }
         @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(255, 184, 79, 0.7); } 70% { box-shadow: 0 0 0 10px rgba(255, 184, 79, 0); } 100% { box-shadow: 0 0 0 0 rgba(255, 184, 79, 0); } }
@@ -88,13 +87,16 @@
     </div>
 
    <script type="module">
-        // Import our Firebase setup
         import { db, ref, onValue } from './firebase-config.js';
 
         const settingsRef = ref(db, 'settings');
 
-        // This listener fires automatically the moment the page loads, 
-        // AND instantly whenever the database changes!
+        window.formatAMPM = function(hour) {
+            let h = hour % 12 || 12;
+            let ampm = hour < 12 ? 'AM' : 'PM';
+            return `${h}:00 ${ampm}`;
+        }
+
         onValue(settingsRef, (snapshot) => {
             const data = snapshot.val();
             if (data && data.tempLow !== undefined) {
@@ -104,9 +106,9 @@
                 document.getElementById("dispLux").textContent = `${data.luxThreshold} lux`;
                 document.getElementById("dispBright").textContent = `${data.globalBrightness || 10}/10`;
                 
-                let onH = data.timeOnHour.toString().padStart(2, '0');
-                let offH = data.timeOffHour.toString().padStart(2, '0');
-                document.getElementById("dispTime").textContent = `${onH}:00 to ${offH}:00`;
+                let onH = window.formatAMPM(data.timeOnHour);
+                let offH = window.formatAMPM(data.timeOffHour);
+                document.getElementById("dispTime").textContent = `${onH} to ${offH}`;
                 
                 const tState = document.getElementById("dispTimerState");
                 tState.textContent = data.timerEnabled ? "Timer Active" : "Timer Disabled";

@@ -6,6 +6,7 @@
 #include <WebServer.h>
 #include <ArduinoJson.h>
 #include <HTTPClient.h>
+#include <time.h> // NEW: For NTP Clock Syncing
 
 /* ==========================================
  * PIN DEFINITIONS
@@ -18,8 +19,9 @@
 #define ENC_DT 33
 #define ENC_SW 25
 #define I2CBusClock 250000 //250kHz
+
 /* ==========================================
- * OBJECT INITIALIZATION
+ * OBJECT INITIALIZATION (HW RENDER PRESERVED)
  * ========================================== */
 U8G2_SH1106_128X64_NONAME_F_HW_I2C topDisplay(U8G2_R0, 22, 21, U8X8_PIN_NONE);
 U8G2_SSD1306_128X32_UNIVISION_F_HW_I2C bottomDisplay(U8G2_R0, 22, 21, U8X8_PIN_NONE);
@@ -30,6 +32,7 @@ int soilLow = 30, soilHigh = 70, globalBrightness = 10;
 bool timerEnabled = false;
 int timeOnHour = 8, timeOnMinute = 0, timeOffHour = 20, timeOffMinute = 0;
 long luxThreshold = 30000;
+int timeZoneOffset = -5; // Default UTC -5 (EST)
 
 // System Clock
 int currentHour = 12, currentMinute = 0;
@@ -110,7 +113,7 @@ MenuItem settingsItems[] = { { "WiFi", nullptr, wifiItems, 4 }, { "Set Clock", s
 MenuItem mainMenu[] = { { "Temperature", nullptr, tempItems, 2 }, { "Humidity", nullptr, humItems, 2 }, { "Soil Moisture", nullptr, soilItems, 2 }, { "Light Control", nullptr, lightItems, 3 }, { "pH Level", showPH, nullptr, 0 }, { "Settings", nullptr, settingsItems, 6 } };
 
 void applyBrightness(int level) {
-  int contrast = map(level, 1, 10, 50, 255);
+  int contrast = map(level, 1, 10, 1, 255); // 1 = Minimum display power, 10 = Max power
   topDisplay.setContrast(contrast); bottomDisplay.setContrast(contrast);
 }
 
@@ -121,7 +124,20 @@ String getLuxPlantType(long lux) {
 
 void updateClock() {
   if (millis() - lastMinuteTick >= 60000) {
-    lastMinuteTick = millis(); currentMinute++;
+    lastMinuteTick = millis(); 
+    
+    // Check NTP if WiFi is connected
+    if (WiFi.status() == WL_CONNECTED) {
+      struct tm timeinfo;
+      if (getLocalTime(&timeinfo, 10)) {
+        currentHour = timeinfo.tm_hour;
+        currentMinute = timeinfo.tm_min;
+        return; // Success, bypass manual counter
+      }
+    }
+    
+    // Fallback counter
+    currentMinute++;
     if (currentMinute > 59) { currentMinute = 0; currentHour++; if (currentHour > 23) currentHour = 0; }
   }
 }
@@ -157,7 +173,12 @@ void showHoverContext(const char* itemName) {
   else if (name == "pH Level") valLine = "Current: 7.0";
   else if (name == "Settings") valLine = "System Setup";
   else if (String(itemName).startsWith("Timer")) valLine = timerEnabled ? "Status: ON" : "Status: OFF";
-  else if (name == "Set Clock") { String m = (currentMinute < 10) ? "0" + String(currentMinute) : String(currentMinute); valLine = "Time: " + String(currentHour) + ":" + m; }
+  else if (name == "Set Clock") { 
+    int h = currentHour % 12; if(h==0) h=12;
+    String m = (currentMinute < 10) ? "0" + String(currentMinute) : String(currentMinute); 
+    String ampm = currentHour < 12 ? " AM" : " PM";
+    valLine = "Time: " + String(h) + ":" + m + ampm; 
+  }
   else if (name == "Brightness") valLine = "Level: " + String(globalBrightness) + "/10";
   else valLine = "Select to Edit";
   updateBottomMenu(name, valLine);
@@ -165,11 +186,17 @@ void showHoverContext(const char* itemName) {
 
 void drawTimeEdit(int h, int m, bool editingHour, String title) {
   topDisplay.clearBuffer(); topDisplay.setFont(u8g2_font_helvB10_tr); topDisplay.setCursor(getCenterX(topDisplay, title), 12); topDisplay.print(title);
-  topDisplay.setFont(u8g2_font_logisoso24_tr); topDisplay.setCursor(20, 50); if (h < 10) topDisplay.print("0"); topDisplay.print(h);
-  topDisplay.setCursor(63, 47); topDisplay.print(":"); topDisplay.setCursor(75, 50); if (m < 10) topDisplay.print("0"); topDisplay.print(m);
-  topDisplay.setFont(u8g2_font_6x10_tf); if (editingHour) topDisplay.drawStr(39, 62, "^"); else topDisplay.drawStr(94, 62, "^");
+  topDisplay.setFont(u8g2_font_logisoso24_tr); topDisplay.setCursor(15, 50); 
+  int dispH = h % 12; if (dispH == 0) dispH = 12;
+  if (dispH < 10) topDisplay.print("0"); topDisplay.print(dispH);
+  topDisplay.setCursor(55, 47); topDisplay.print(":"); 
+  topDisplay.setCursor(70, 50); if (m < 10) topDisplay.print("0"); topDisplay.print(m);
+  topDisplay.setFont(u8g2_font_helvB10_tr); topDisplay.setCursor(105, 50); topDisplay.print(h < 12 ? "AM" : "PM");
+  topDisplay.setFont(u8g2_font_6x10_tf); if (editingHour) topDisplay.drawStr(30, 62, "^"); else topDisplay.drawStr(80, 62, "^");
   topDisplay.sendBuffer();
-  String sH = (h < 10) ? "0" + String(h) : String(h); String sM = (m < 10) ? "0" + String(m) : String(m); updateBottomMenu(title, sH + ":" + sM);
+  
+  String sH = String(dispH); String sM = (m < 10) ? "0" + String(m) : String(m); 
+  updateBottomMenu(title, sH + ":" + sM + (h < 12 ? " AM" : " PM"));
 }
 
 void drawLuxEdit(long currentLux) {
@@ -264,35 +291,41 @@ void syncWithCloudSilent() {
   
   if (httpCode == 200) {
     String payload = http.getString(); 
-    // Increased size to handle incoming system_logs text block
     DynamicJsonDocument doc(2048); 
     deserializeJson(doc, payload);
     
-    // 1. CHECK FOR REMOTE COMMANDS FIRST
+    // 1. CHECK FOR REMOTE COMMANDS
     if (doc.containsKey("reboot_cmd") && doc["reboot_cmd"].as<bool>() == true) {
         sysLog("Cloud Restart Command Received! Rebooting...");
         updateBottomMenu("REMOTE REBOOT", "PLEASE WAIT");
-        
-        // Clear flag in Firebase before dying
         HTTPClient patchHttp; patchHttp.begin(firebaseURL); patchHttp.addHeader("Content-Type", "application/json");
         patchHttp.sendRequest("PATCH", "{\"reboot_cmd\":false}"); patchHttp.end();
-        
-        delay(1000);
-        ESP.restart(); 
+        delay(1000); ESP.restart(); 
     }
 
     if (doc.containsKey("fetch_logs_cmd") && doc["fetch_logs_cmd"].as<bool>() == true) {
         sysLog("Web Dashboard requested log dump.");
-        
         DynamicJsonDocument logDoc(2048);
-        logDoc["fetch_logs_cmd"] = false; // Reset the flag
-        logDoc["system_logs"] = webLogBuffer; // Push the RAM buffer to cloud
-
+        logDoc["fetch_logs_cmd"] = false; 
+        logDoc["system_logs"] = webLogBuffer; 
         String logJson; serializeJson(logDoc, logJson);
         HTTPClient patchHttp; patchHttp.begin(firebaseURL); patchHttp.addHeader("Content-Type", "application/json");
         patchHttp.sendRequest("PATCH", logJson); patchHttp.end();
-        
-        sysLog("Logs uploaded successfully.");
+    }
+
+    if (doc.containsKey("global_reset_cmd") && doc["global_reset_cmd"].as<bool>() == true) {
+        sysLog("Web Command: Global Reset Initiated.");
+        updateBottomMenu("GLOBAL RESET", "PLEASE WAIT");
+        resetGlobal(); // This function will also push the reset values back to the cloud
+        HTTPClient patchHttp; patchHttp.begin(firebaseURL); patchHttp.addHeader("Content-Type", "application/json");
+        patchHttp.sendRequest("PATCH", "{\"global_reset_cmd\":false}"); patchHttp.end();
+    }
+
+    if (doc.containsKey("sensor_test_cmd") && doc["sensor_test_cmd"].as<bool>() == true) {
+        sysLog("Web Command: Sensor Test Display.");
+        uiState = STATE_SENSOR_TEST;
+        HTTPClient patchHttp; patchHttp.begin(firebaseURL); patchHttp.addHeader("Content-Type", "application/json");
+        patchHttp.sendRequest("PATCH", "{\"sensor_test_cmd\":false}"); patchHttp.end();
     }
 
     // 2. PROCESS SETTINGS CHANGES
@@ -308,6 +341,14 @@ void syncWithCloudSilent() {
     if (doc.containsKey("timeOffHour") && timeOffHour != doc["timeOffHour"].as<int>()) { timeOffHour = doc["timeOffHour"]; changed = true; }
     if (doc.containsKey("luxThreshold") && luxThreshold != doc["luxThreshold"].as<long>()) { luxThreshold = doc["luxThreshold"]; changed = true; }
     if (doc.containsKey("timerEnabled") && timerEnabled != doc["timerEnabled"].as<bool>()) { timerEnabled = doc["timerEnabled"]; changed = true; }
+    
+    // Timezone & NTP handling
+    if (doc.containsKey("timeZoneOffset") && timeZoneOffset != doc["timeZoneOffset"].as<int>()) { 
+        timeZoneOffset = doc["timeZoneOffset"]; 
+        configTime(timeZoneOffset * 3600, 0, "pool.ntp.org", "time.nist.gov"); // Refresh NTP sync
+        changed = true; 
+    }
+
     if (doc.containsKey("globalBrightness") && globalBrightness != doc["globalBrightness"].as<int>()) { 
         globalBrightness = doc["globalBrightness"]; applyBrightness(globalBrightness); changed = true; 
     }
@@ -340,6 +381,7 @@ void pushToCloud() {
   doc["luxThreshold"] = luxThreshold;
   doc["timerEnabled"] = timerEnabled;
   doc["globalBrightness"] = globalBrightness;
+  doc["timeZoneOffset"] = timeZoneOffset;
 
   String jsonOutput;
   serializeJson(doc, jsonOutput);
@@ -350,7 +392,7 @@ void pushToCloud() {
   
   http.end();
   delay(1000);
-  lastMenuIdx = -1; // Reset hover context when returning
+  lastMenuIdx = -1; 
 }
 
 void setup() {
@@ -362,7 +404,7 @@ void setup() {
   attachInterrupt(digitalPinToInterrupt(ENC_DT), readEncoder, CHANGE);
 
   Wire.begin(I2C_SDA, I2C_SCL);
-  topDisplay.setBusClock(I2CBusClock); bottomDisplay.setBusClock(I2CBusClock);
+  topDisplay.setBusClock(I2CBusClock); bottomDisplay.setBusClock(I2CBusClock); 
   bottomDisplay.setI2CAddress(BOTTOM_ADDR * 2); bottomDisplay.begin();
   topDisplay.setI2CAddress(TOP_ADDR * 2); topDisplay.begin();
   applyBrightness(globalBrightness);
@@ -372,6 +414,7 @@ void setup() {
   
   if (wm.autoConnect("Plant_Setup", "plantadmin")) { 
     sysLog("WiFi Connected: " + WiFi.localIP().toString());
+    configTime(timeZoneOffset * 3600, 0, "pool.ntp.org", "time.nist.gov"); // Init NTP Sync
     syncWithCloud(); 
   } else { 
     sysLog("WiFi connection skipped. Local mode active.");
@@ -393,7 +436,7 @@ void loop() {
   if (diff != 0) {
     lastEncoderCount = currentEnc;
     uiNeedsDraw = true;
-    lastEncoderMoveTime = millis(); // Important: Stop cloud poll if user is active
+    lastEncoderMoveTime = millis(); 
 
     if (uiState == STATE_MENU || uiState == STATE_SUBMENU) {
       selectedIndex += diff;
@@ -469,7 +512,7 @@ void loop() {
     showingTempMsg = false; lastMenuIdx = -1; uiNeedsDraw = true;
   }
 
-  // 4. Background Cloud Polling (ONLY IF NO ENCODER ACTIVITY)
+  // 4. Background Cloud Polling
   if (millis() - lastCloudCheck > 3000) {
     lastCloudCheck = millis();
     if (millis() - lastEncoderMoveTime > 3000) { syncWithCloudSilent(); }
